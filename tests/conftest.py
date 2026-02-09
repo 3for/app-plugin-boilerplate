@@ -3,6 +3,13 @@ import pytest
 from ragger.conftest import configuration
 from .utils import WalletAddr
 
+###########################
+### CONFIGURATION START ###
+###########################
+MNEMONIC = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
+configuration.OPTIONAL.BACKEND_SCOPE = "class"
+configuration.OPTIONAL.CUSTOM_SEED = MNEMONIC
 
 ###########################
 ### CONFIGURATION START ###
