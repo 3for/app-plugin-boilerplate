@@ -12,5 +12,5 @@ testing_with_latest = [
 ]
 
 testing_with_prod = [
-    {url = "https://github.com/LedgerHQ/app-ethereum", ref = "master", use_case = "use_test_keys"},
+    {url = "https://github.com/3for/app-tron", ref = "master", use_case = "use_test_keys"},
 ]
