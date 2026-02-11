@@ -26,6 +26,7 @@
 //     - an enum named selector_t with every NAME
 //     - a map named SELECTORS associating each NAME with it's value
 #define SELECTORS_LIST(X)                    \
+    X(TRANSFER_TO_VALUE, 0xa9059cbb) \
     X(SWAP_EXACT_ETH_FOR_TOKENS, 0x7ff36ab5) \
     X(BOILERPLATE_DUMMY_2, 0x13374242)
 
@@ -54,6 +55,8 @@ typedef enum {
     PATH_OFFSET,
     PATH_LENGTH,
     UNEXPECTED_PARAMETER,
+    TO_ADDRESS,
+    VALUE,
 } parameter;
 
 // Shared global memory with Ethereum app. Must be at most 5 * 32 bytes.
@@ -64,6 +67,10 @@ typedef struct context_s {
     uint8_t amount_received[INT256_LENGTH];
     uint8_t beneficiary[ADDRESS_LENGTH];
     uint8_t token_received[ADDRESS_LENGTH];
+    
+    uint8_t to_address[ADDRESS_LENGTH]; // ETH format address
+    uint8_t value[INT256_LENGTH];
+    
     char ticker[MAX_TICKER_LEN];
     uint8_t decimals;
     uint8_t token_found;

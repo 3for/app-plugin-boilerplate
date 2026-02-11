@@ -41,6 +41,35 @@ static void handle_swap_exact_eth_for_tokens(ethPluginProvideParameter_t *msg, c
     }
 }
 
+// EDIT THIS: Remove this function and write your own handlers!
+static void hanlde_transfer_to_value(ethPluginProvideParameter_t *msg, context_t *context) {
+    if (context->go_to_offset) {
+        if (msg->parameterOffset != context->offset + SELECTOR_SIZE) {
+            return;
+        }
+        context->go_to_offset = false;
+    }
+    switch (context->next_param) {
+        case TO_ADDRESS:  // to_address
+            copy_address(context->to_address,
+                           msg->parameter,
+                           sizeof(context->to_address));
+            context->next_param = VALUE;
+            break;
+        case VALUE:  // value
+            copy_parameter(context->value,
+                           msg->parameter,
+                           sizeof(context->value));
+            context->next_param = BENEFICIARY;
+            break;
+        // Keep this
+        default:
+            PRINTF("Param not supported: %d\n", context->next_param);
+            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            break;
+    }
+}
+
 void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     // We use `%.*H`: it's a utility function to print bytes. You first give
@@ -55,6 +84,9 @@ void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
 
     // EDIT THIS: adapt the cases and the names of the functions.
     switch (context->selectorIndex) {
+        case TRANSFER_TO_VALUE:
+            hanlde_transfer_to_value(msg, context);
+            break;
         case SWAP_EXACT_ETH_FOR_TOKENS:
             handle_swap_exact_eth_for_tokens(msg, context);
             break;

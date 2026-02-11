@@ -91,6 +91,12 @@ def parse_args() -> argparse.Namespace:
         help="Tron gRPC endpoint used for TriggerContract and BroadcastTransaction",
     )
     parser.add_argument(
+        "--fee-limit",
+        type=int,
+        default=100_000_000,
+        help="Transaction fee_limit in sun, default: 100000000",
+    )
+    parser.add_argument(
         "--no-broadcast",
         action="store_true",
         help="Build/sign flow only, skip broadcast",
@@ -261,6 +267,7 @@ def main() -> int:
             contract_address=contract_address,
             data=TRC20_TRANSFER_DATA,
         )
+        tx_ext.transaction.raw_data.fee_limit = args.fee_limit
         tx_raw = tx_ext.transaction.raw_data.SerializeToString()
 
         plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, SELECTOR, cal_pem_path)
