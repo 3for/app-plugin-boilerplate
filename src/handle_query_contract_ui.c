@@ -1,67 +1,73 @@
 #include "plugin.h"
 
-// EDIT THIS: You need to adapt / remove the static functions (set_send_ui, set_receive_ui ...) to
+// EDIT THIS: You need to adapt / remove the static functions (set_value_ui, set_contract_ui ...) to
 // match what you wish to display.
 
-// Set UI for the "Send" screen.
+// Set UI for "Value" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_send_ui(ethQueryContractUI_t *msg) {
-    strlcpy(msg->title, "Send", msg->titleLength);
-
-    const uint8_t *eth_amount = (const uint8_t *) msg->txContent->amount;
-    uint8_t eth_amount_size = sizeof(msg->txContent->amount);
-
-    // Converts the uint256 number located in `eth_amount` to its string representation and
-    // copies this to `msg->msg`.
-    return amountToString(eth_amount,
-                          eth_amount_size,
-                          WEI_TO_ETHER,
-                          "ETH",
-                          msg->msg,
-                          msg->msgLength);
-}
-
-// Set UI for "Receive" screen.
-// EDIT THIS: Adapt / remove this function to your needs.
-static bool set_receive_ui(ethQueryContractUI_t *msg, const context_t *context) {
-    strlcpy(msg->title, "Receive Min.", msg->titleLength);
+static bool set_value_ui(ethQueryContractUI_t *msg, const context_t *context) {
+    strlcpy(msg->title, "Value", msg->titleLength);
 
     uint8_t decimals = context->decimals;
     const char *ticker = context->ticker;
 
     // If the token look up failed, use the default network ticker along with the default decimals.
     if (!context->token_found) {
-        decimals = WEI_TO_ETHER;
+        decimals = SUN_TO_TRX;
         ticker = msg->network_ticker;
     }
 
-    return amountToString(context->amount_received,
-                          sizeof(context->amount_received),
+    return amountToString(context->value,
+                          sizeof(context->value),
                           decimals,
                           ticker,
                           msg->msg,
                           msg->msgLength);
 }
 
-// Set UI for "Beneficiary" screen.
+// Set UI for "Contract" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_beneficiary_ui(ethQueryContractUI_t *msg, context_t *context) {
-    strlcpy(msg->title, "Beneficiary", msg->titleLength);
+static bool set_contract_ui(ethQueryContractUI_t *msg, context_t *context) {
+    (void) context;
+    strlcpy(msg->title, "Contract", msg->titleLength);
+    if (msg->txContent == NULL || msg->msgLength == 0) {
+        return false;
+    }
+    PRINTF("set_contract_ui contractAddress(TRON): %.*H\n",
+           TRON_ADDRESS_SIZE,
+           msg->txContent->contractAddress);
+    if (msg->txContent->contractAddress[0] != 0x41) {
+        return false;
+    }
 
-    // Prefix the address with `0x`.
-    msg->msg[0] = '0';
-    msg->msg[1] = 'x';
+    // Convert TRON binary address (0x41 + 20-byte payload) into Base58Check `T...`.
+    char eth_address[(ADDRESS_LENGTH * 2) + 3];
+    uint64_t chainid = 0;
+    if (!getEthDisplayableAddress(msg->txContent->contractAddress + 1,
+                                  eth_address,
+                                  sizeof(eth_address),
+                                  chainid)) {
+        return false;
+    }
 
-    // We need a random chainID for legacy reasons with `getEthAddressStringFromBinary`.
-    // Setting it to `0` will make it work with every chainID :)
+    return ethToTronBase58(eth_address, msg->msg, msg->msgLength);
+}
+
+// Set UI for "To Address" screen.
+// EDIT THIS: Adapt / remove this function to your needs.
+static bool set_to_address_ui(ethQueryContractUI_t *msg, context_t *context) {
+    strlcpy(msg->title, "To Address", msg->titleLength);
+    PRINTF("set_to_address_ui to_address: %.*H\n", ADDRESS_LENGTH, context->to_address);
+
+    // Convert the stored 20-byte EVM-style address into a TRON Base58Check string.
+    char eth_address[(ADDRESS_LENGTH * 2) + 3];
     uint64_t chainid = 0;
 
-    // Get the string representation of the address stored in `context->beneficiary`. Put it in
-    // `msg->msg`.
-    return getEthAddressStringFromBinary(
-        context->beneficiary,
-        msg->msg + 2,  // +2 here because we've already prefixed with '0x'.
-        chainid);
+    if (!getEthDisplayableAddress(context->to_address, eth_address, sizeof(eth_address), chainid)) {
+        return false;
+    }
+
+    return ethToTronBase58(eth_address, msg->msg, msg->msgLength);
 }
 
 void handle_query_contract_ui(ethQueryContractUI_t *msg) {
@@ -78,13 +84,13 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
     // EDIT THIS: Adapt the cases for the screens you'd like to display.
     switch (msg->screenIndex) {
         case 0:
-            ret = set_send_ui(msg);
+            ret = set_to_address_ui(msg, context);
             break;
         case 1:
-            ret = set_receive_ui(msg, context);
+            ret = set_value_ui(msg, context);
             break;
         case 2:
-            ret = set_beneficiary_ui(msg, context);
+            ret = set_contract_ui(msg, context);
             break;
         // Keep this
         default:

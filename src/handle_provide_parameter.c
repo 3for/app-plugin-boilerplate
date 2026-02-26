@@ -60,7 +60,7 @@ static void hanlde_transfer_to_value(ethPluginProvideParameter_t *msg, context_t
             copy_parameter(context->value,
                            msg->parameter,
                            sizeof(context->value));
-            context->next_param = BENEFICIARY;
+            context->next_param = UNEXPECTED_PARAMETER;
             break;
         // Keep this
         default:

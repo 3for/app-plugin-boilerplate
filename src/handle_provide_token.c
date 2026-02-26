@@ -5,8 +5,9 @@
 // find any info regarding the requested tokens!
 void handle_provide_token(ethPluginProvideInfo_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
-
+    PRINTF("ZYD handle_provide_token 1111\n");
     if (msg->item1) {
+        PRINTF("ZYD handle_provide_token 2222\n");
         // The Ethereum App found the information for the requested token!
         // Store its decimals.
         context->decimals = msg->item1->token.decimals;
@@ -16,6 +17,7 @@ void handle_provide_token(ethPluginProvideInfo_t *msg) {
         // Keep track that we found the token.
         context->token_found = true;
     } else {
+        PRINTF("ZYD handle_provide_token 3333\n");
         // The Ethereum App did not manage to find the info for the requested token.
         context->token_found = false;
 
@@ -24,5 +26,6 @@ void handle_provide_token(ethPluginProvideInfo_t *msg) {
         // like so:
         // msg->additionalScreens = 1;
     }
+    PRINTF("ZYD handle_provide_token 4444\n");
     msg->result = ETH_PLUGIN_RESULT_OK;
 }
