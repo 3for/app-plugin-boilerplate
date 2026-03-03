@@ -18,9 +18,9 @@ from .utils import check_tx_signature, get_appname_from_makefile
 """
 Tron Protobuf
 """
-sys.path.append(f"{Path(__file__).parent.parent.resolve()}/proto")
-from core import Contract_pb2 as contract
+sys.path.append(f"{Path(__file__).parent.parent.resolve()}/build/proto")
 from core import Tron_pb2 as tron
+from core.contract import smart_contract_pb2 as contract
 
 TRC20_CONTRACT_B58 = "TBoTZcARzWVgnNuB9SyE3S5g1RwsXoQL16"
 TRC20_TRANSFER_SELECTOR = bytes.fromhex("a9059cbb")

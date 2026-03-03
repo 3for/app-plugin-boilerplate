@@ -26,12 +26,20 @@ from eth_keys import KeyAPI
 from eth_keys.datatypes import PublicKey, Signature
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
-from tron_sdk_py.proto.api.api_pb2_grpc import WalletStub
-from tron_sdk_py.proto.core.contract import smart_contract_pb2 as smart_contract
 
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-sys.path.append(str(ROOT_DIR / "proto"))
+sys.path.append(str(ROOT_DIR / "build" / "proto"))
+
+try:
+    from api import api_pb2_grpc
+    from core.contract import smart_contract_pb2 as smart_contract
+except ModuleNotFoundError as exc:
+    raise ModuleNotFoundError(
+        "Missing generated protobuf modules under build/proto. Run `make proto-python` first."
+    ) from exc
+
+WalletStub = api_pb2_grpc.WalletStub
 
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -249,27 +257,6 @@ def verify_tx_signature(tx_raw: bytes, signature: bytes, public_key_hex_without_
     return keys.ecdsa_verify(tx_id, sig, pub)
 
 
-def set_raw_data_custom_data(raw_data, payload: bytes) -> str:
-    # tron_sdk_py protobuf naming may vary by version: "custom_data" or "data".
-    for field_name in ("custom_data", "data"):
-        if hasattr(raw_data, field_name):
-            setattr(raw_data, field_name, payload)
-            return field_name
-
-    descriptor_fields = []
-    if hasattr(raw_data, "DESCRIPTOR") and hasattr(raw_data.DESCRIPTOR, "fields"):
-        descriptor_fields = [field.name for field in raw_data.DESCRIPTOR.fields]
-        for field_name in ("custom_data", "data"):
-            if field_name in descriptor_fields:
-                setattr(raw_data, field_name, payload)
-                return field_name
-
-    raise AttributeError(
-        f'Protocol message raw has no "custom_data"/"data" field. '
-        f"Available fields: {descriptor_fields}"
-    )
-
-
 def sign_and_optionally_broadcast(
     *,
     dongle,
@@ -355,13 +342,9 @@ def main() -> int:
             data=TRC20_TRANSFER_DATA,
         )
         tx_ext_with_custom_data.transaction.raw_data.fee_limit = args.fee_limit
-        custom_data_field = set_raw_data_custom_data(
-            tx_ext_with_custom_data.transaction.raw_data,
-            EXTRA_CUSTOM_DATA,
-        )
+        tx_ext_with_custom_data.transaction.raw_data.data = EXTRA_CUSTOM_DATA
         logger.info(
-            "[tx-2-with-custom-data] %s length: %d bytes",
-            custom_data_field,
+            "[tx-2-with-custom-data] data length: %d bytes",
             len(EXTRA_CUSTOM_DATA),
         )
         if not sign_and_optionally_broadcast(

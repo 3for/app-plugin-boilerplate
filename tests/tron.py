@@ -28,9 +28,9 @@ from .client.command_builder import PKIPubKeyUsage
 '''
 Tron Protobuf
 '''
-sys.path.append(f"{Path(__file__).parent.parent.resolve()}/proto")
+sys.path.append(f"{Path(__file__).parent.parent.resolve()}/build/proto")
 from core import Tron_pb2 as tron
-from core import Contract_pb2 as contract
+from core.contract import asset_issue_contract_pb2 as asset_issue_contract
 
 from google.protobuf.any_pb2 import Any
 from google.protobuf.internal.decoder import _DecodeVarint32
@@ -233,9 +233,9 @@ class TronClient:
         tx.raw_data.ref_block_bytes = bytes.fromhex("3DCE")
         if data:
             if data.__class__ is dict:
-                tx.raw_data.custom_data = pickle.dumps(data)
+                tx.raw_data.data = pickle.dumps(data)
             else:
-                tx.raw_data.custom_data = data
+                tx.raw_data.data = data
 
         c = tx.raw_data.contract.add()
         c.type = contractType
@@ -452,7 +452,7 @@ class TronClient:
                               warning_approve: bool = False):
         tx = self.packContract(
             tron.Transaction.Contract.TransferAssetContract,
-            contract.TransferAssetContract(
+            asset_issue_contract.TransferAssetContract(
                 owner_address=bytes.fromhex(self.getAccount(0)['addressHex']),
                 to_address=bytes.fromhex(("41" + tx_params["to"].hex())),
                 amount=1000000,

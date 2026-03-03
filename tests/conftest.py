@@ -1,7 +1,33 @@
 import pytest
+import subprocess
+from pathlib import Path
 
 from ragger.conftest import configuration
 from .utils import WalletAddr
+
+
+def _ensure_tron_proto_python() -> None:
+    repo_root = Path(__file__).parent.parent.resolve()
+    required_pb2 = [
+        repo_root / "build" / "proto" / "core" / "Tron_pb2.py",
+        repo_root / "build" / "proto" / "core" / "contract" / "smart_contract_pb2.py",
+        repo_root / "build" / "proto" / "api" / "api_pb2_grpc.py",
+    ]
+    if all(path.exists() for path in required_pb2):
+        return
+
+    try:
+        subprocess.run(["make", "proto-python"], cwd=repo_root, check=True)
+    except FileNotFoundError as err:
+        raise RuntimeError("`make` is required to generate protobuf python files.") from err
+    except subprocess.CalledProcessError as err:
+        raise RuntimeError(
+            "Failed to generate protobuf python files. "
+            "Run `make proto-python` and ensure `grpcio-tools` is installed."
+        ) from err
+
+
+_ensure_tron_proto_python()
 
 ###########################
 ### CONFIGURATION START ###

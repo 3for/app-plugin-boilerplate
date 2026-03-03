@@ -2,3 +2,4 @@ ledger_app_clients.ethereum
 pytest
 ragger[speculos,ledgercomm]
 base58==2.1.1
+grpcio-tools
