@@ -57,6 +57,11 @@ TRC20_TRANSFER_DATA = bytes.fromhex(
     "000000000000000000000000364b03e0815687edaf90b81ff58e496dea7383d7"
     "00000000000000000000000000000000000000000000000000000000000f4240"
 )
+EXTRA_CUSTOM_DATA = (
+    "In this section of the Developer Portal, you will find the resources to build, test and submit C and Rust apps, "
+    "Ethereum plugins and Cloned coins apps, compatible with all Ledger devices (Ledger Nano S+, Ledger Nano X, Ledger "
+    "Stax and Ledger Flex).This is a test case for extra data."
+).encode()
 
 
 @dataclass
@@ -244,6 +249,68 @@ def verify_tx_signature(tx_raw: bytes, signature: bytes, public_key_hex_without_
     return keys.ecdsa_verify(tx_id, sig, pub)
 
 
+def set_raw_data_custom_data(raw_data, payload: bytes) -> str:
+    # tron_sdk_py protobuf naming may vary by version: "custom_data" or "data".
+    for field_name in ("custom_data", "data"):
+        if hasattr(raw_data, field_name):
+            setattr(raw_data, field_name, payload)
+            return field_name
+
+    descriptor_fields = []
+    if hasattr(raw_data, "DESCRIPTOR") and hasattr(raw_data.DESCRIPTOR, "fields"):
+        descriptor_fields = [field.name for field in raw_data.DESCRIPTOR.fields]
+        for field_name in ("custom_data", "data"):
+            if field_name in descriptor_fields:
+                setattr(raw_data, field_name, payload)
+                return field_name
+
+    raise AttributeError(
+        f'Protocol message raw has no "custom_data"/"data" field. '
+        f"Available fields: {descriptor_fields}"
+    )
+
+
+def sign_and_optionally_broadcast(
+    *,
+    dongle,
+    stub: WalletStub,
+    account: Account,
+    tx_ext,
+    plugin_name: str,
+    contract_address: bytes,
+    cal_pem_path: Path,
+    no_broadcast: bool,
+    tx_label: str,
+) -> bool:
+    tx_raw = tx_ext.transaction.raw_data.SerializeToString()
+
+    plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, SELECTOR, cal_pem_path)
+    logger.info("[%s] EXTERNAL_PLUGIN_SETUP status: 0x%04X", tx_label, plugin_sw)
+
+    logger.info("[%s] Please review the transaction on the Ledger device and approve it...", tx_label)
+    sign_resp = clear_sign(dongle, account.path, tx_raw)
+    signature = sign_resp[:65]
+
+    valid = verify_tx_signature(tx_raw, signature, account.public_key_hex[2:])
+    tx_id = hashlib.sha256(tx_raw).hexdigest()
+
+    logger.info("[%s] txID: %s", tx_label, tx_id)
+    logger.info("[%s] signature: %s", tx_label, signature.hex())
+    logger.info("[%s] signature valid: %s", tx_label, valid)
+
+    if not valid:
+        logger.error("[%s] Invalid signature", tx_label)
+        return False
+
+    if no_broadcast:
+        logger.info("[%s] Broadcast skipped by --no-broadcast", tx_label)
+        return True
+
+    broadcast_resp = broadcast_signed_tx(stub, tx_ext, signature)
+    logger.info("[%s] broadcast response: %s", tx_label, broadcast_resp)
+    return True
+
+
 def main() -> int:
     args = parse_args()
     makefile_path = Path(args.makefile)
@@ -268,32 +335,47 @@ def main() -> int:
             data=TRC20_TRANSFER_DATA,
         )
         tx_ext.transaction.raw_data.fee_limit = args.fee_limit
-        tx_raw = tx_ext.transaction.raw_data.SerializeToString()
-
-        plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, SELECTOR, cal_pem_path)
-        logger.info("EXTERNAL_PLUGIN_SETUP status: 0x%04X", plugin_sw)
-
-        logger.info("Please review the transaction on the Ledger device and approve it...")
-        sign_resp = clear_sign(dongle, account.path, tx_raw)
-        signature = sign_resp[:65]
-
-        valid = verify_tx_signature(tx_raw, signature, account.public_key_hex[2:])
-        tx_id = hashlib.sha256(tx_raw).hexdigest()
-
-        logger.info("txID: %s", tx_id)
-        logger.info("signature: %s", signature.hex())
-        logger.info("signature valid: %s", valid)
-
-        if not valid:
-            logger.error("Invalid signature")
+        if not sign_and_optionally_broadcast(
+            dongle=dongle,
+            stub=stub,
+            account=account,
+            tx_ext=tx_ext,
+            plugin_name=plugin_name,
+            contract_address=contract_address,
+            cal_pem_path=cal_pem_path,
+            no_broadcast=args.no_broadcast,
+            tx_label="tx-1",
+        ):
             return 1
 
-        if args.no_broadcast:
-            logger.info("Broadcast skipped by --no-broadcast")
-            return 0
-
-        broadcast_resp = broadcast_signed_tx(stub, tx_ext, signature)
-        logger.info("broadcast response: %s", broadcast_resp)
+        tx_ext_with_custom_data = build_trigger_smart_contract_tx(
+            stub=stub,
+            owner_address_hex=account.address_hex,
+            contract_address=contract_address,
+            data=TRC20_TRANSFER_DATA,
+        )
+        tx_ext_with_custom_data.transaction.raw_data.fee_limit = args.fee_limit
+        custom_data_field = set_raw_data_custom_data(
+            tx_ext_with_custom_data.transaction.raw_data,
+            EXTRA_CUSTOM_DATA,
+        )
+        logger.info(
+            "[tx-2-with-custom-data] %s length: %d bytes",
+            custom_data_field,
+            len(EXTRA_CUSTOM_DATA),
+        )
+        if not sign_and_optionally_broadcast(
+            dongle=dongle,
+            stub=stub,
+            account=account,
+            tx_ext=tx_ext_with_custom_data,
+            plugin_name=plugin_name,
+            contract_address=contract_address,
+            cal_pem_path=cal_pem_path,
+            no_broadcast=args.no_broadcast,
+            tx_label="tx-2-with-custom-data",
+        ):
+            return 1
         return 0
     finally:
         channel.close()
