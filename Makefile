@@ -30,8 +30,7 @@ GOOGLE_API_PROTO_DIR ?= ethereum-plugin-sdk/.generated/googleapis
 GOOGLE_API_PROTO_SUBDIR := $(GOOGLE_API_PROTO_DIR)/google/api
 GOOGLE_API_PROTO_BASE_URL ?= https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 TRON_CORE_PROTO_FILES := $(wildcard $(TRON_PROTOCOL_DIR)/core/*.proto) \
-	$(wildcard $(TRON_PROTOCOL_DIR)/core/contract/*.proto) \
-	$(wildcard $(TRON_PROTOCOL_DIR)/core/tron/*.proto)
+	$(wildcard $(TRON_PROTOCOL_DIR)/core/contract/*.proto)
 TRON_API_PROTO_FILES := $(wildcard $(TRON_PROTOCOL_DIR)/api/*.proto)
 GOOGLE_API_PROTO_FILES := $(wildcard $(GOOGLE_API_PROTO_SUBDIR)/*.proto)
 TRON_ALL_PROTO_FILES := $(TRON_CORE_PROTO_FILES) $(TRON_API_PROTO_FILES)
