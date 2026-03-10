@@ -5,7 +5,7 @@ Run the same flow as tests/test_swap.py::test_swap_exact_eth_for_token
 on a real device:
 1) Build TriggerSmartContract(TRC20 transfer) payload.
 2) Send EXTERNAL_PLUGIN_SETUP (set_external_plugin).
-3) Sign with CLEAR_SIGN (include tx length) and verify signature.
+3) Sign with SIGN_EXTERNAL_PLUGIN (include tx length) and verify signature.
 4) Broadcast signed transaction.
 """
 
@@ -49,7 +49,7 @@ logger = logging.getLogger(__name__)
 CLA = 0xE0
 
 INS_GET_PUBLIC_KEY = 0x02
-INS_CLEAR_SIGN = 0xC4
+INS_SIGN_EXTERNAL_PLUGIN = 0xC4
 INS_EXTERNAL_PLUGIN_SETUP = 0x12
 
 P1_FIRST = 0x00
@@ -219,7 +219,7 @@ def setup_external_plugin(dongle, plugin_name: str, contract_address: bytes, sel
         raise
 
 
-def split_clear_sign_chunks(path: str, tx_raw: bytes, include_tx_len: bool = True) -> list[bytes]:
+def split_tx_chunks(path: str, tx_raw: bytes, include_tx_len: bool = True) -> list[bytes]:
     first = bytearray(pack_derivation_path(path))
     if include_tx_len:
         first += struct.pack(">I", len(tx_raw))
@@ -236,17 +236,17 @@ def split_clear_sign_chunks(path: str, tx_raw: bytes, include_tx_len: bool = Tru
     return chunks
 
 
-def clear_sign(dongle, path: str, tx_raw: bytes) -> bytes:
-    chunks = split_clear_sign_chunks(path, tx_raw, include_tx_len=True)
+def external_plugin_sign(dongle, path: str, tx_raw: bytes) -> bytes:
+    chunks = split_tx_chunks(path, tx_raw, include_tx_len=True)
 
     if len(chunks) == 1:
-        return dongle.exchange(build_apdu(INS_CLEAR_SIGN, P1_SIGN, 0x00, chunks[0]))
+        return dongle.exchange(build_apdu(INS_SIGN_EXTERNAL_PLUGIN, P1_SIGN, 0x00, chunks[0]))
 
-    dongle.exchange(build_apdu(INS_CLEAR_SIGN, P1_FIRST, 0x00, chunks[0]))
+    dongle.exchange(build_apdu(INS_SIGN_EXTERNAL_PLUGIN, P1_FIRST, 0x00, chunks[0]))
     for chunk in chunks[1:-1]:
-        dongle.exchange(build_apdu(INS_CLEAR_SIGN, P1_MORE, 0x00, chunk))
+        dongle.exchange(build_apdu(INS_SIGN_EXTERNAL_PLUGIN, P1_MORE, 0x00, chunk))
 
-    return dongle.exchange(build_apdu(INS_CLEAR_SIGN, P1_LAST, 0x00, chunks[-1]))
+    return dongle.exchange(build_apdu(INS_SIGN_EXTERNAL_PLUGIN, P1_LAST, 0x00, chunks[-1]))
 
 
 def verify_tx_signature(tx_raw: bytes, signature: bytes, public_key_hex_without_prefix: str) -> bool:
@@ -275,7 +275,7 @@ def sign_and_optionally_broadcast(
     logger.info("[%s] EXTERNAL_PLUGIN_SETUP status: 0x%04X", tx_label, plugin_sw)
 
     logger.info("[%s] Please review the transaction on the Ledger device and approve it...", tx_label)
-    sign_resp = clear_sign(dongle, account.path, tx_raw)
+    sign_resp = external_plugin_sign(dongle, account.path, tx_raw)
     signature = sign_resp[:65]
 
     valid = verify_tx_signature(tx_raw, signature, account.public_key_hex[2:])

@@ -59,13 +59,13 @@ def _build_trigger_tx(client: TronClient, contract_address: bytes,
             data=calldata))
 
 
-def _force_clear_sign_reset(client: TronClient):
+def _force_external_plugin_reset(client: TronClient):
     # This forces the app to run clear-sign finalization and reset internal state.
     try:
         client.sign(client.getAccount(0)["path"],
                     b"",
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     except ExceptionRAPDU:
         pass
@@ -138,73 +138,73 @@ def test_set_external_plugin_returns_plugin_not_found(
         raise
 
 
-def test_clear_sign_without_external_plugin_returns_invalid_data(
+def test_external_plugin_without_external_plugin_returns_invalid_data(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     tx = _build_trc20_transfer_tx(client)
     with pytest.raises(ExceptionRAPDU) as err:
         client.sign(client.getAccount(0)["path"],
                     tx,
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_clear_sign_rejects_nonzero_p2(backend: BackendInterface,
+def test_external_plugin_rejects_nonzero_p2(backend: BackendInterface,
                                        firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
-        backend.exchange(CLA, InsType.CLEAR_SIGN, P1_SIGN, 0x01, b"")
+        backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_SIGN, 0x01, b"")
     assert err.value.status == Errors.INCORRECT_P2
 
 
-def test_clear_sign_rejects_unknown_p1(backend: BackendInterface,
+def test_external_plugin_rejects_unknown_p1(backend: BackendInterface,
                                        firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
-        backend.exchange(CLA, InsType.CLEAR_SIGN, 0x7F, 0x00, b"")
+        backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, 0x7F, 0x00, b"")
     assert err.value.status == Errors.INCORRECT_P2
 
 
-def test_clear_sign_more_without_init_returns_conditions_not_satisfied(
+def test_external_plugin_more_without_init_returns_conditions_not_satisfied(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
-        backend.exchange(CLA, InsType.CLEAR_SIGN, P1_MORE, 0x00, b"")
+        backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_MORE, 0x00, b"")
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_clear_sign_rejects_invalid_bip32_path(backend: BackendInterface,
+def test_external_plugin_rejects_invalid_bip32_path(backend: BackendInterface,
                                                firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
-        backend.exchange(CLA, InsType.CLEAR_SIGN, P1_FIRST, 0x00, b"\x05")
+        backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_FIRST, 0x00, b"\x05")
     assert err.value.status == Errors.INCORRECT_BIP32_PATH
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
 
 
-def test_clear_sign_requires_tx_len_after_path(backend: BackendInterface,
+def test_external_plugin_requires_tx_len_after_path(backend: BackendInterface,
                                                firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     # Build only a valid derivation path payload, without the mandatory tx length field.
     with pytest.raises(ExceptionRAPDU) as err:
-        backend.exchange(CLA, InsType.CLEAR_SIGN, P1_FIRST, 0x00,
+        backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_FIRST, 0x00,
                          pack_derivation_path(client.getAccount(0)["path"]))
     assert err.value.status == Errors.INCORRECT_LENGTH
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
 
 
-def test_clear_sign_selector_mismatch_returns_invalid_data(
+def test_external_plugin_selector_mismatch_returns_invalid_data(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     rapdu = _setup_external_plugin(backend, PLUGIN_NAME, _contract_address(client),
                                    TRC20_SWAP_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
@@ -216,15 +216,15 @@ def test_clear_sign_selector_mismatch_returns_invalid_data(
         client.sign(client.getAccount(0)["path"],
                     tx,
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_clear_sign_contract_mismatch_returns_invalid_data(
+def test_external_plugin_contract_mismatch_returns_invalid_data(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     wrong_contract = bytes.fromhex(client.getAccount(1)["addressHex"])
     rapdu = _setup_external_plugin(backend, PLUGIN_NAME, wrong_contract,
                                    TRC20_TRANSFER_SELECTOR)
@@ -237,15 +237,15 @@ def test_clear_sign_contract_mismatch_returns_invalid_data(
         client.sign(client.getAccount(0)["path"],
                     tx,
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_clear_sign_plugin_parameter_rejection_returns_conditions_not_satisfied(
+def test_external_plugin_plugin_parameter_rejection_returns_conditions_not_satisfied(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     rapdu = _setup_external_plugin(backend, PLUGIN_NAME, _contract_address(client),
                                    TRC20_TRANSFER_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
@@ -258,15 +258,15 @@ def test_clear_sign_plugin_parameter_rejection_returns_conditions_not_satisfied(
         client.sign(client.getAccount(0)["path"],
                     tx,
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_clear_sign_plugin_query_ui_failure_returns_conditions_not_satisfied(
+def test_external_plugin_plugin_query_ui_failure_returns_conditions_not_satisfied(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     non_tron_contract = bytes.fromhex("42" + ("11" * 20))
     rapdu = _setup_external_plugin(backend, PLUGIN_NAME, non_tron_contract,
                                    TRC20_TRANSFER_SELECTOR)
@@ -279,16 +279,16 @@ def test_clear_sign_plugin_query_ui_failure_returns_conditions_not_satisfied(
         client.sign(client.getAccount(0)["path"],
                     tx,
                     navigate=False,
-                    ins=InsType.CLEAR_SIGN,
+                    ins=InsType.SIGN_EXTERNAL_PLUGIN,
                     include_tx_len=True)
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_clear_sign_with_external_plugin_success(backend: BackendInterface,
+def test_external_plugin_with_external_plugin_success(backend: BackendInterface,
                                                  firmware: Firmware,
                                                  navigator: Navigator):
     client = TronClient(backend, firmware, navigator)
-    _force_clear_sign_reset(client)
+    _force_external_plugin_reset(client)
     rapdu = _setup_external_plugin(backend, PLUGIN_NAME, _contract_address(client),
                                    TRC20_TRANSFER_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
@@ -299,9 +299,9 @@ def test_clear_sign_with_external_plugin_success(backend: BackendInterface,
     text = "Sign" if firmware.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,
-                       snappath=Path("test_trx_trc20_send_clear_sign"),
+                       snappath=Path("test_trx_trc20_send_external_plugin"),
                        text=text,
-                       ins=InsType.CLEAR_SIGN,
+                       ins=InsType.SIGN_EXTERNAL_PLUGIN,
                        include_tx_len=True)
     assert check_tx_signature(tx, resp.data[0:65],
                               client.getAccount(0)["publicKey"][2:])
