@@ -1,7 +1,7 @@
 #include "plugin.h"
 
 // EDIT THIS: Remove this function and write your own handlers!
-static void handle_swap_exact_eth_for_tokens(ethPluginProvideParameter_t *msg, context_t *context) {
+static void handle_swap_exact_eth_for_tokens(tronPluginProvideParameter_t *msg, context_t *context) {
     if (context->go_to_offset) {
         if (msg->parameterOffset != context->offset + SELECTOR_SIZE) {
             return;
@@ -36,13 +36,13 @@ static void handle_swap_exact_eth_for_tokens(ethPluginProvideParameter_t *msg, c
         // Keep this
         default:
             PRINTF("Param not supported: %d\n", context->next_param);
-            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
             break;
     }
 }
 
 // EDIT THIS: Remove this function and write your own handlers!
-static void hanlde_transfer_to_value(ethPluginProvideParameter_t *msg, context_t *context) {
+static void hanlde_transfer_to_value(tronPluginProvideParameter_t *msg, context_t *context) {
     if (context->go_to_offset) {
         if (msg->parameterOffset != context->offset + SELECTOR_SIZE) {
             return;
@@ -65,12 +65,12 @@ static void hanlde_transfer_to_value(ethPluginProvideParameter_t *msg, context_t
         // Keep this
         default:
             PRINTF("Param not supported: %d\n", context->next_param);
-            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
             break;
     }
 }
 
-void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
+void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     // We use `%.*H`: it's a utility function to print bytes. You first give
     // the number of bytes you wish to print (in this case, `PARAMETER_LENGTH`) and then
@@ -80,7 +80,7 @@ void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
            PARAMETER_LENGTH,
            msg->parameter);
 
-    msg->result = ETH_PLUGIN_RESULT_OK;
+    msg->result = TRON_PLUGIN_RESULT_OK;
 
     // EDIT THIS: adapt the cases and the names of the functions.
     switch (context->selectorIndex) {
@@ -94,7 +94,7 @@ void handle_provide_parameter(ethPluginProvideParameter_t *msg) {
             break;
         default:
             PRINTF("Selector Index not supported: %d\n", context->selectorIndex);
-            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
             break;
     }
 }

@@ -19,10 +19,10 @@ void handle_query_contract_id(ethQueryContractID_t *msg) {
             break;
         default:
             PRINTF("Selector index: %d not supported\n", context->selectorIndex);
-            msg->result = ETH_PLUGIN_RESULT_ERROR;
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
             return;
     }
 
     // Return valid status.
-    msg->result = ETH_PLUGIN_RESULT_OK;
+    msg->result = TRON_PLUGIN_RESULT_OK;
 }

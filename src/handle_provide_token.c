@@ -3,7 +3,7 @@
 // EDIT THIS: Adapt this function to your needs! Remember, the information for tokens are held in
 // `msg->token1` and `msg->token2`. If those pointers are `NULL`, this means the ethereum app didn't
 // find any info regarding the requested tokens!
-void handle_provide_token(ethPluginProvideInfo_t *msg) {
+void handle_provide_token(tronPluginProvideInfo_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     PRINTF("ZYD handle_provide_token 1111\n");
     if (msg->item1) {
@@ -27,5 +27,5 @@ void handle_provide_token(ethPluginProvideInfo_t *msg) {
         // msg->additionalScreens = 1;
     }
     PRINTF("ZYD handle_provide_token 4444\n");
-    msg->result = ETH_PLUGIN_RESULT_OK;
+    msg->result = TRON_PLUGIN_RESULT_OK;
 }

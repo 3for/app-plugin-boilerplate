@@ -96,5 +96,5 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
         default:
             PRINTF("Received an invalid screenIndex\n");
     }
-    msg->result = ret ? ETH_PLUGIN_RESULT_OK : ETH_PLUGIN_RESULT_ERROR;
+    msg->result = ret ? TRON_PLUGIN_RESULT_OK : TRON_PLUGIN_RESULT_ERROR;
 }

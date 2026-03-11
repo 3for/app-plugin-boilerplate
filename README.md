@@ -6,7 +6,7 @@
 
 This repo is meant to be a forkable example of a plugin.
 
-Plugins are lightweight applications that go hand-in-hand with the Ethereum
+Plugins are lightweight applications that go hand-in-hand with the TRON
 Application on Ledger devices.
 
 They allow users to safely interact with smart contracts by parsing the

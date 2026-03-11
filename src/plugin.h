@@ -18,7 +18,7 @@
 #pragma once
 
 #include <string.h>
-#include "eth_plugin_interface.h"
+#include "tron_plugin_interface.h"
 
 // All possible selectors of your plugin.
 // EDIT THIS: Enter your selectors here, in the format X(NAME, value)

@@ -1,6 +1,6 @@
 #include "plugin.h"
 
-void handle_finalize(ethPluginFinalize_t *msg) {
+void handle_finalize(tronPluginFinalize_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     if (msg->txContent != NULL) {
         PRINTF("finalize contractAddress(TRON): %.*H\n",
@@ -9,7 +9,7 @@ void handle_finalize(ethPluginFinalize_t *msg) {
     }
     PRINTF("finalize to_address(EVM): %.*H\n", ADDRESS_LENGTH, context->to_address);
 
-    msg->uiType = ETH_UI_TYPE_GENERIC;
+    msg->uiType = TRON_UI_TYPE_GENERIC;
 
     // EDIT THIS: Set the total number of screen you will need.
     msg->numScreens = 2;
@@ -26,5 +26,5 @@ void handle_finalize(ethPluginFinalize_t *msg) {
     // token addresses you will info for (such as decimals, ticker...).
     msg->tokenLookup1 = NULL; // TODO. Not proper here.
 
-    msg->result = ETH_PLUGIN_RESULT_OK;
+    msg->result = TRON_PLUGIN_RESULT_OK;
 }
