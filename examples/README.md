@@ -17,6 +17,8 @@ It does three things:
 
 Important: this example uses the local signing material bundled with `ledger_app_clients.ethereum` to build the `external plugin` setup APDU, exactly like the functional test does. A production Ledger Ethereum app can reject that metadata if it expects Ledger CAL production signatures. In that case, the script will stop during `set_external_plugin`.
 
+Important: in Ethereum app `1.20.x`, `GET_PUBLIC_KEY` resets the in-memory plugin context. The script therefore fetches the wallet address before `set_external_plugin`, and performs signing immediately after `set_external_plugin`.
+
 ## Run
 
 Example command:

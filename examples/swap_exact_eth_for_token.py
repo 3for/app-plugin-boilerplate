@@ -258,6 +258,11 @@ def main() -> int:
         ensure_requested_app(backend, args.app_name, args.skip_open_app)
         client = EthAppClient(backend)
 
+        # GET_PUBLIC_ADDR resets Ethereum app context (including pluginType). Resolve the wallet
+        # first, then set the external plugin immediately before SIGN.
+        wallet_addr = get_wallet_address(client, args.derivation_path)
+        print(f"Signing address: {format_address(wallet_addr)}")
+
         try:
             response = client.set_external_plugin(
                 PLUGIN_NAME,
@@ -269,9 +274,6 @@ def main() -> int:
             print("External plugin metadata accepted by the Ethereum app.")
         except ExceptionRAPDU as exc:
             raise RuntimeError(describe_plugin_error(exc)) from exc
-
-        wallet_addr = get_wallet_address(client, args.derivation_path)
-        print(f"Signing address: {format_address(wallet_addr)}")
 
         encoded_tx, _ = client.serialize_tx(tx_params)
         print(f"Unsigned transaction payload: 0x{encoded_tx.hex()}")

@@ -3,8 +3,15 @@
 
 // Called once to init.
 void handle_init_contract(ethPluginInitContract_t *msg) {
-    // Make sure we are running a compatible version.
-    if (msg->interfaceVersion != ETH_PLUGIN_INTERFACE_VERSION_LATEST) {
+    // Accept any known interface version up to the one this plugin was built with.
+    // Requiring strict equality can make the plugin unavailable on real devices running an older
+    // Ethereum app, which then falls back to blind signing.
+    if ((msg->interfaceVersion < ETH_PLUGIN_INTERFACE_VERSION_1) ||
+        (msg->interfaceVersion > ETH_PLUGIN_INTERFACE_VERSION_LATEST)) {
+        PRINTF("Unsupported interface version: %u (supported range: %u..%u)\n",
+               msg->interfaceVersion,
+               ETH_PLUGIN_INTERFACE_VERSION_1,
+               ETH_PLUGIN_INTERFACE_VERSION_LATEST);
         // If not the case, return the `UNAVAILABLE` status.
         msg->result = ETH_PLUGIN_RESULT_UNAVAILABLE;
         return;
