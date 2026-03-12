@@ -23,10 +23,10 @@ APPVERSION_M = 1
 APPVERSION_N = 0
 APPVERSION_P = 0
 
-TRON_PROTOCOL_DIR ?= ethereum-plugin-sdk/protocol
+TRON_PROTOCOL_DIR ?= tron-plugin-sdk/protocol
 PROTO_PY_OUT_DIR ?= build/proto
 PYTHON ?= python3
-GOOGLE_API_PROTO_DIR ?= ethereum-plugin-sdk/.generated/googleapis
+GOOGLE_API_PROTO_DIR ?= tron-plugin-sdk/.generated/googleapis
 GOOGLE_API_PROTO_SUBDIR := $(GOOGLE_API_PROTO_DIR)/google/api
 GOOGLE_API_PROTO_BASE_URL ?= https://raw.githubusercontent.com/googleapis/googleapis/master/google/api
 TRON_CORE_PROTO_FILES := $(wildcard $(TRON_PROTOCOL_DIR)/core/*.proto) \
@@ -79,7 +79,7 @@ endif
 endif
 
 ifeq ($(NEED_BOLOS_SDK),1)
-include ethereum-plugin-sdk/standard_plugin.mk
+include tron-plugin-sdk/standard_plugin.mk
 endif
 
 .DEFAULT_GOAL := all

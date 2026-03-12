@@ -48,7 +48,7 @@ set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -ggdb2 -O3 -Wno-gnu-zero-variadic-macro-arguments")
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../src")
-set(ETH_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../ethereum-plugin-sdk")
+set(TRON_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tron-plugin-sdk")
 
 add_compile_definitions(
     APPNAME="PluginBoilerplate"
@@ -80,7 +80,7 @@ include_directories(
     ${BOLOS_SDK}/lib_cxng/include
     ${BOLOS_SDK}/lib_cxng/src
     ${BOLOS_SDK}/target/nanox/include
-    ${ETH_DIR}/src
+    ${TRON_SDK_DIR}/src
     ${SRC_DIR}
 )
 
@@ -90,10 +90,10 @@ file(GLOB_RECURSE APPLICATION_SRC
     ${SRC_DIR}/*.c
 
     # Take all sdk sources
-    ${ETH_DIR}/src/*.c
+    ${TRON_SDK_DIR}/src/*.c
 )
 # Filter out main.c from the SDK, the fuzzing has its own main
-list(FILTER APPLICATION_SRC EXCLUDE REGEX "${ETH_DIR}/src/main")
+list(FILTER APPLICATION_SRC EXCLUDE REGEX "${TRON_SDK_DIR}/src/main")
 
 add_executable(fuzz
     ${APPLICATION_SRC}

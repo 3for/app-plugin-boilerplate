@@ -25,7 +25,7 @@ in order to better understand the flow and the context for plugins.
 Ethereum plugins need the [Ethereum SDK](https://github.com/LedgerHQ/ethereum-plugin-sdk).
 You can use the `ETHEREUM_PLUGIN_SDK` variable to point to the directory where you cloned
 this repository. By default, the `Makefile` expects it to be at the root directory of this
-plugin repository by the `ethereum-plugin-sdk` name.
+plugin repository by the `tron-plugin-sdk` name.
 
 You can see that this [CI](https://github.com/LedgerHQ/app-plugin-boilerplate/blob/develop/.github/workflows/check_sdk.yml) workflow
 verifies that the SDK used is either on the latest `master` or `develop` references. This ensures

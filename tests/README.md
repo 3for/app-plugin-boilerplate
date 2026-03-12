@@ -78,7 +78,7 @@ Install the tests requirements (only needed once):
 pip install -r tests/requirements.txt
 ```
 
-Generate Tron protobuf python files from the `ethereum-plugin-sdk/protocol` submodule:
+Generate TRON protobuf python files from the `tron-plugin-sdk/protocol` submodule:
 
 ```shell
 make proto-python
