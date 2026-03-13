@@ -9,20 +9,43 @@ from ragger.navigator import Navigator
 
 from .client.command_builder import InsType as BuilderInsType
 from .external_plugin_helpers import (PLUGIN_NAME, PLUGIN_NOT_FOUND,
-                                      TRC20_SWAP_SELECTOR,
-                                      TRC20_TRANSFER_CALLDATA,
-                                      TRC20_TRANSFER_CALLDATA_WITH_EXTRA_PARAMETER,
-                                      TRC20_TRANSFER_SELECTOR,
-                                      build_trc20_transfer_tx,
-                                      build_trigger_tx, contract_address,
+                                      abi_hex_to_bytes, build_trigger_tx,
+                                      evm_hex_from_contract_id,
                                       force_external_plugin_reset,
-                                      setup_external_plugin)
+                                      load_contract_from_abi_fixture,
+                                      setup_external_plugin,
+                                      tron_contract_bytes_from_contract_id)
 from .tron import CLA, Errors, InsType, TronClient
 from .utils import check_tx_signature
+
+TRC20_CONTRACT_B58 = "TBoTZcARzWVgnNuB9SyE3S5g1RwsXoQL16"
+TRC20_ABI_FILENAME = f"{TRC20_CONTRACT_B58}.abi.json"
+TRC20_CONTRACT_BYTES = tron_contract_bytes_from_contract_id(TRC20_CONTRACT_B58)
+TRC20_TRANSFER_RECIPIENT_B58 = "TEvHMZWyfjCAdDJEKYxYVL8rRpigddLC1R"
+TRC20_TRANSFER_RECIPIENT_HEX = evm_hex_from_contract_id(TRC20_TRANSFER_RECIPIENT_B58)
+TRC20_TRANSFER_AMOUNT = 1_000_000
+TRC20_EXTRA_PARAMETER = (1).to_bytes(32, byteorder="big")
+TRC20_SWAP_SELECTOR = bytes.fromhex("7ff36ab5")
+TRC20_CONTRACT = load_contract_from_abi_fixture(TRC20_ABI_FILENAME)
+TRC20_TRANSFER_CALLDATA = abi_hex_to_bytes(
+    TRC20_CONTRACT.encode_abi(
+        "transfer",
+        [bytes.fromhex(TRC20_TRANSFER_RECIPIENT_HEX), TRC20_TRANSFER_AMOUNT]))
+TRC20_TRANSFER_SELECTOR = TRC20_TRANSFER_CALLDATA[:4]
+TRC20_TRANSFER_CALLDATA_WITH_EXTRA_PARAMETER = (TRC20_TRANSFER_CALLDATA +
+                                                TRC20_EXTRA_PARAMETER)
 
 P1_FIRST = 0x00
 P1_SIGN = 0x10
 P1_MORE = 0x80
+
+
+def contract_address() -> bytes:
+    return TRC20_CONTRACT_BYTES
+
+
+def build_trc20_transfer_tx(client: TronClient) -> bytes:
+    return build_trigger_tx(client, contract_address(), TRC20_TRANSFER_CALLDATA)
 
 def test_external_plugin_setup_rejects_short_payload(backend: BackendInterface):
     with pytest.raises(ExceptionRAPDU) as err:
@@ -34,7 +57,7 @@ def test_external_plugin_setup_rejects_short_payload(backend: BackendInterface):
 def test_external_plugin_setup_rejects_name_too_long(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
-    rapdu = setup_external_plugin(backend, "x" * 30, contract_address(client),
+    rapdu = setup_external_plugin(backend, "x" * 30, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
     assert rapdu.status == Errors.INCORRECT_DATA
 
@@ -44,7 +67,7 @@ def test_external_plugin_setup_rejects_invalid_signature(
     client = TronClient(backend, firmware, None)
     rapdu = setup_external_plugin(backend,
                                   PLUGIN_NAME,
-                                  contract_address(client),
+                                  contract_address(),
                                   TRC20_TRANSFER_SELECTOR,
                                   signature=b"\x30\x06\x02\x01\x01\x02\x01\x01")
     assert rapdu.status == Errors.INCORRECT_DATA
@@ -55,7 +78,7 @@ def test_external_plugin_setup_returns_plugin_not_found(
     client = TronClient(backend, firmware, None)
     try:
         rapdu = setup_external_plugin(backend, "missingPlugin",
-                                      contract_address(client),
+                                      contract_address(),
                                       TRC20_TRANSFER_SELECTOR)
         assert rapdu.status == PLUGIN_NOT_FOUND
     except Exception as err:
@@ -134,7 +157,7 @@ def test_external_plugin_sign_rejects_selector_mismatch(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
-    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(client),
+    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_SWAP_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
         pytest.xfail("Plugin binary is not loaded in this test environment")
@@ -175,14 +198,14 @@ def test_external_plugin_sign_rejects_extra_parameter(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
-    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(client),
+    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
         pytest.xfail("Plugin binary is not loaded in this test environment")
     assert rapdu.status == Errors.OK
 
     tx = build_trigger_tx(client,
-                          contract_address(client),
+                          contract_address(),
                           TRC20_TRANSFER_CALLDATA_WITH_EXTRA_PARAMETER)
     with pytest.raises(ExceptionRAPDU) as err:
         client.sign(client.getAccount(0)["path"],
@@ -219,7 +242,7 @@ def test_external_plugin_signs_trc20_transfer(backend: BackendInterface,
                                               navigator: Navigator):
     client = TronClient(backend, firmware, navigator)
     force_external_plugin_reset(client)
-    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(client),
+    rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
         pytest.xfail("Plugin binary is not loaded in this test environment")

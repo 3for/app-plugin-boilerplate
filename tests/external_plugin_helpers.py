@@ -19,49 +19,42 @@ from core import Tron_pb2 as tron
 from core.contract import smart_contract_pb2 as contract
 
 
-TRC20_CONTRACT_B58 = "TBoTZcARzWVgnNuB9SyE3S5g1RwsXoQL16"
-TRC20_ABI_FOLDER = Path(__file__).parent / "abis"
-TRC20_TRANSFER_RECIPIENT_HEX = "364b03e0815687edaf90b81ff58e496dea7383d7"
-TRC20_TRANSFER_AMOUNT = 1_000_000
-TRC20_EXTRA_PARAMETER = (1).to_bytes(32, byteorder="big")
-TRC20_SWAP_SELECTOR = bytes.fromhex("7ff36ab5")
 PLUGIN_NOT_FOUND = 0x6984
 PLUGIN_NAME = get_appname_from_makefile()
-
-
-def _load_contract_from_abi(abi_path: Path):
-    with abi_path.open(encoding="utf-8") as file:
-        return Web3().eth.contract(abi=json.load(file),
-                                   address=bytes.fromhex(TRC20_CONTRACT_EVM_HEX))
-
-
-def _abi_hex_to_bytes(data: str) -> bytes:
-    return bytes.fromhex(data[2:] if data.startswith("0x") else data)
-
+ABIS_FOLDER = Path(__file__).parent / "abis"
 
 def _tron_b58_to_evm_hex(address: str) -> str:
     tron_hex = base58.b58decode_check(address).hex()
     return tron_hex[2:]
 
 
-TRC20_CONTRACT_EVM_HEX = _tron_b58_to_evm_hex(TRC20_CONTRACT_B58)
-TRC20_CONTRACT = _load_contract_from_abi(
-    TRC20_ABI_FOLDER / f"0x{TRC20_CONTRACT_EVM_HEX}.abi.json")
-TRC20_TRANSFER_CALLDATA = _abi_hex_to_bytes(
-    TRC20_CONTRACT.encode_abi(
-        "transfer",
-        [bytes.fromhex(TRC20_TRANSFER_RECIPIENT_HEX), TRC20_TRANSFER_AMOUNT]))
-TRC20_TRANSFER_SELECTOR = TRC20_TRANSFER_CALLDATA[:4]
-TRC20_TRANSFER_CALLDATA_WITH_EXTRA_PARAMETER = (TRC20_TRANSFER_CALLDATA +
-                                                TRC20_EXTRA_PARAMETER)
+def abi_hex_to_bytes(data: str) -> bytes:
+    return bytes.fromhex(data[2:] if data.startswith("0x") else data)
 
 
-def contract_address(client: TronClient) -> bytes:
-    return bytes.fromhex(client.address_hex(TRC20_CONTRACT_B58))
+def evm_hex_from_contract_id(contract_id: str) -> str:
+    if contract_id.startswith("0x"):
+        return contract_id[2:]
+    if len(contract_id) == 40:
+        return contract_id
+    return _tron_b58_to_evm_hex(contract_id)
 
 
-def build_trc20_transfer_tx(client: TronClient) -> bytes:
-    return build_trigger_tx(client, contract_address(client), TRC20_TRANSFER_CALLDATA)
+def tron_contract_bytes_from_contract_id(contract_id: str) -> bytes:
+    if contract_id.startswith("0x"):
+        contract_id = contract_id[2:]
+    if len(contract_id) == 40:
+        return bytes.fromhex(f"41{contract_id}")
+    return base58.b58decode_check(contract_id)
+
+
+def load_contract_from_abi_fixture(abi_filename: str):
+    abi_path = ABIS_FOLDER / abi_filename
+    contract_id = abi_filename.split(".")[0]
+    with abi_path.open(encoding="utf-8") as file:
+        return Web3().eth.contract(abi=json.load(file),
+                                   address=bytes.fromhex(
+                                       evm_hex_from_contract_id(contract_id)))
 
 
 def build_trigger_tx(client: TronClient, contract_address_bytes: bytes,
