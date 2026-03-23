@@ -100,3 +100,33 @@ def setup_external_plugin(backend: BackendInterface,
         return backend.exchange_raw(apdu)
     finally:
         backend.raise_policy = previous_policy
+
+
+def provide_trc20_token_information(backend: BackendInterface,
+                                    ticker: str,
+                                    contract_address_bytes: bytes,
+                                    decimals: int,
+                                    chain_id: int,
+                                    signature: Optional[bytes] = None):
+    if signature is None:
+        # Mirror the main app test helper: build the APDU with an empty signature,
+        # then sign the token metadata payload that follows the APDU header.
+        tmp = CommandBuilder().provide_trc20_token_information(ticker,
+                                                               contract_address_bytes,
+                                                               decimals,
+                                                               chain_id,
+                                                               bytes())
+        signature = keychain.sign_data(keychain.Key.CAL, tmp[6:])
+
+    apdu = CommandBuilder().provide_trc20_token_information(ticker,
+                                                            contract_address_bytes,
+                                                            decimals,
+                                                            chain_id,
+                                                            signature)
+
+    previous_policy = backend.raise_policy
+    backend.raise_policy = RaisePolicy.RAISE_NOTHING
+    try:
+        return backend.exchange_raw(apdu)
+    finally:
+        backend.raise_policy = previous_policy

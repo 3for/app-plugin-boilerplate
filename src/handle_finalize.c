@@ -24,7 +24,7 @@ void handle_finalize(tronPluginFinalize_t *msg) {
 
     // EDIT THIS: set `tokenLookup1` (and maybe `tokenLookup2`) to point to
     // token addresses you will info for (such as decimals, ticker...).
-    msg->tokenLookup1 = NULL; // TODO. Not proper here.
+    msg->tokenLookup1 = msg->txContent->contractAddress;
 
     msg->result = TRON_PLUGIN_RESULT_OK;
 }

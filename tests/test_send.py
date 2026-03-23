@@ -14,12 +14,13 @@ from .external_plugin_helpers import (PLUGIN_NAME, PLUGIN_NOT_FOUND,
                                       evm_hex_from_contract_id,
                                       force_external_plugin_reset,
                                       load_contract_from_abi_fixture,
+                                      provide_trc20_token_information,
                                       setup_external_plugin,
                                       tron_contract_bytes_from_contract_id)
 from .tron import CLA, Errors, InsType, TronClient
 from .utils import check_tx_signature
 
-TRC20_CONTRACT_B58 = "TBoTZcARzWVgnNuB9SyE3S5g1RwsXoQL16"
+TRC20_CONTRACT_B58 = "TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf"
 TRC20_ABI_FILENAME = f"{TRC20_CONTRACT_B58}.abi.json"
 TRC20_CONTRACT_BYTES = tron_contract_bytes_from_contract_id(TRC20_CONTRACT_B58)
 TRC20_TRANSFER_RECIPIENT_B58 = "TEvHMZWyfjCAdDJEKYxYVL8rRpigddLC1R"
@@ -35,6 +36,9 @@ TRC20_TRANSFER_CALLDATA = abi_hex_to_bytes(
 TRC20_TRANSFER_SELECTOR = TRC20_TRANSFER_CALLDATA[:4]
 TRC20_TRANSFER_CALLDATA_WITH_EXTRA_PARAMETER = (TRC20_TRANSFER_CALLDATA +
                                                 TRC20_EXTRA_PARAMETER)
+TRC20_TOKEN_TICKER = "USDT"
+TRC20_TOKEN_DECIMALS = 6
+TRON_MAINNET_CHAIN_ID = 1151668124
 
 P1_FIRST = 0x00
 P1_SIGN = 0x10
@@ -247,6 +251,14 @@ def test_sign_trc20_transfer(backend: BackendInterface,
                                   TRC20_TRANSFER_SELECTOR)
     if rapdu.status == PLUGIN_NOT_FOUND:
         pytest.xfail("Plugin binary is not loaded in this test environment")
+    assert rapdu.status == Errors.OK
+    # For testing purposes only; in production, it should be signed by Ledger. 
+    rapdu = provide_trc20_token_information(backend,
+                                            TRC20_TOKEN_TICKER,
+                                            tron_contract_bytes_from_contract_id(
+                                                TRC20_CONTRACT_B58),
+                                            TRC20_TOKEN_DECIMALS,
+                                            TRON_MAINNET_CHAIN_ID)
     assert rapdu.status == Errors.OK
 
     tx = build_trc20_transfer_tx(client)
