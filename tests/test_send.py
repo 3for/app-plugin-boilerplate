@@ -6,6 +6,7 @@ from ragger.bip import pack_derivation_path
 from ragger.error import ExceptionRAPDU
 from ragger.firmware import Firmware
 from ragger.navigator import Navigator
+from inspect import currentframe
 
 from .client.command_builder import InsType as BuilderInsType
 from .external_plugin_helpers import (PLUGIN_NAME, PLUGIN_NOT_FOUND,
@@ -47,14 +48,14 @@ def contract_address() -> bytes:
 def build_trc20_transfer_tx(client: TronClient) -> bytes:
     return build_trigger_tx(client, contract_address(), TRC20_TRANSFER_CALLDATA)
 
-def test_external_plugin_setup_rejects_short_payload(backend: BackendInterface):
+def test_setup_rejects_short_payload(backend: BackendInterface):
     with pytest.raises(ExceptionRAPDU) as err:
         backend.exchange(CLA, BuilderInsType.EXTERNAL_PLUGIN_SETUP, 0x00, 0x00,
                          b"\x00")
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_setup_rejects_name_too_long(
+def test_setup_rejects_name_too_long(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     rapdu = setup_external_plugin(backend, "x" * 30, contract_address(),
@@ -62,7 +63,7 @@ def test_external_plugin_setup_rejects_name_too_long(
     assert rapdu.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_setup_rejects_invalid_signature(
+def test_setup_rejects_invalid_signature(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     rapdu = setup_external_plugin(backend,
@@ -73,7 +74,7 @@ def test_external_plugin_setup_rejects_invalid_signature(
     assert rapdu.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_setup_returns_plugin_not_found(
+def test_setup_returns_plugin_not_found(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     try:
@@ -90,7 +91,7 @@ def test_external_plugin_setup_returns_plugin_not_found(
         raise
 
 
-def test_external_plugin_sign_rejects_when_plugin_not_configured(
+def test_sign_rejects_when_plugin_not_configured(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -104,7 +105,7 @@ def test_external_plugin_sign_rejects_when_plugin_not_configured(
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_sign_rejects_nonzero_p2(backend: BackendInterface,
+def test_sign_rejects_nonzero_p2(backend: BackendInterface,
                                                  firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -113,7 +114,7 @@ def test_external_plugin_sign_rejects_nonzero_p2(backend: BackendInterface,
     assert err.value.status == Errors.INCORRECT_P2
 
 
-def test_external_plugin_sign_rejects_unknown_p1(backend: BackendInterface,
+def test_sign_rejects_unknown_p1(backend: BackendInterface,
                                                  firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -122,7 +123,7 @@ def test_external_plugin_sign_rejects_unknown_p1(backend: BackendInterface,
     assert err.value.status == Errors.INCORRECT_P2
 
 
-def test_external_plugin_sign_rejects_more_without_init(
+def test_sign_rejects_more_without_init(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -131,7 +132,7 @@ def test_external_plugin_sign_rejects_more_without_init(
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_external_plugin_sign_rejects_invalid_bip32_path(
+def test_sign_rejects_invalid_bip32_path(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -141,7 +142,7 @@ def test_external_plugin_sign_rejects_invalid_bip32_path(
     force_external_plugin_reset(client)
 
 
-def test_external_plugin_sign_requires_tx_len_after_path(
+def test_sign_requires_tx_len_after_path(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -153,7 +154,7 @@ def test_external_plugin_sign_requires_tx_len_after_path(
     force_external_plugin_reset(client)
 
 
-def test_external_plugin_sign_rejects_selector_mismatch(
+def test_sign_rejects_selector_mismatch(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -173,7 +174,7 @@ def test_external_plugin_sign_rejects_selector_mismatch(
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_sign_rejects_contract_mismatch(
+def test_sign_rejects_contract_mismatch(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -194,7 +195,7 @@ def test_external_plugin_sign_rejects_contract_mismatch(
     assert err.value.status == Errors.INCORRECT_DATA
 
 
-def test_external_plugin_sign_rejects_extra_parameter(
+def test_sign_rejects_extra_parameter(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -216,7 +217,7 @@ def test_external_plugin_sign_rejects_extra_parameter(
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_external_plugin_sign_rejects_non_tron_contract(
+def test_sign_rejects_non_tron_contract(
         backend: BackendInterface, firmware: Firmware):
     client = TronClient(backend, firmware, None)
     force_external_plugin_reset(client)
@@ -237,7 +238,7 @@ def test_external_plugin_sign_rejects_non_tron_contract(
     assert err.value.status == Errors.CONDITIONS_OF_USE_NOT_SATISFIED
 
 
-def test_external_plugin_signs_trc20_transfer(backend: BackendInterface,
+def test_sign_trc20_transfer(backend: BackendInterface,
                                               firmware: Firmware,
                                               navigator: Navigator):
     client = TronClient(backend, firmware, navigator)
@@ -252,7 +253,7 @@ def test_external_plugin_signs_trc20_transfer(backend: BackendInterface,
     text = "Sign" if firmware.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,
-                       snappath=Path("test_trx_trc20_send_external_plugin"),
+                       snappath=Path(currentframe().f_code.co_name),
                        text=text,
                        ins=InsType.SIGN_EXTERNAL_PLUGIN,
                        include_tx_len=True)

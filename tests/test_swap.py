@@ -7,6 +7,8 @@ import pytest
 from ragger.backend import BackendInterface
 from ragger.firmware import Firmware
 from ragger.navigator import Navigator
+from pathlib import Path
+from inspect import currentframe
 
 from .external_plugin_helpers import (PLUGIN_NAME, PLUGIN_NOT_FOUND,
                                       abi_hex_to_bytes, build_trigger_tx,
@@ -48,7 +50,7 @@ def test_swap_exact_eth_for_token(backend: BackendInterface,
     text = "Sign" if firmware.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,
-                       snappath=Path("test_swap_exact_eth_for_token"),
+                       snappath=Path(currentframe().f_code.co_name),
                        text=text,
                        ins=InsType.SIGN_EXTERNAL_PLUGIN,
                        include_tx_len=True)
