@@ -1,7 +1,6 @@
 import datetime
+from decimal import Decimal
 from pathlib import Path
-
-from web3 import Web3
 
 import pytest
 from ragger.backend import BackendInterface
@@ -12,6 +11,7 @@ from inspect import currentframe
 
 from .external_plugin_helpers import (PLUGIN_NAME, PLUGIN_NOT_FOUND,
                                       abi_hex_to_bytes, build_trigger_tx,
+                                      evm_hex_from_contract_id,
                                       force_external_plugin_reset,
                                       load_contract_from_abi_fixture,
                                       setup_external_plugin,
@@ -23,7 +23,12 @@ SWAP_CONTRACT_B58 = "T9yED5xMV5ARV98BexN97aLZ1UUq7eKSxm"
 SWAP_ABI_FILENAME = f"{SWAP_CONTRACT_B58}.abi.json"
 contract = load_contract_from_abi_fixture(SWAP_ABI_FILENAME)
 SWAP_CONTRACT_TRON_BYTES = tron_contract_bytes_from_contract_id(SWAP_CONTRACT_B58)
-
+TRX_DECIMALS = 6
+SWAP_CALL_VALUE = int(Decimal("0.1") * 10**TRX_DECIMALS)
+PATH_ADDR_0_B58 = "TTVHrJWLPEMpsRJLs14bAZTpfXB5HBmNRa"
+PATH_ADDR_1_B58 = "TKk5VY5HxbYJFc3nTr6XjV42n5LXdorkoB"
+TO_ADDR_B58 = "TVjpchRyV9wdpj6kmwqVsBDWY1J8PaFtnb"
+AMOUNT_OUT_MIN = int(Decimal("28.5") * 10**TRX_DECIMALS)
 def test_swap_exact_eth_for_token(backend: BackendInterface,
                                   firmware: Firmware,
                                   navigator: Navigator):
@@ -31,12 +36,12 @@ def test_swap_exact_eth_for_token(backend: BackendInterface,
     force_external_plugin_reset(client)
 
     data = abi_hex_to_bytes(contract.encode_abi("swapExactETHForTokens", [
-        Web3.to_wei(28.5, "ether"),
+        AMOUNT_OUT_MIN,
         [
-            bytes.fromhex("C02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"),
-            bytes.fromhex("6B3595068778DD592e39A122f4f5a5cF09C90fE2")
+            bytes.fromhex(evm_hex_from_contract_id(PATH_ADDR_0_B58)),
+            bytes.fromhex(evm_hex_from_contract_id(PATH_ADDR_1_B58))
         ],
-        bytes.fromhex("d8dA6BF26964aF9D7eEd9e03E53415D37aA96045"),
+        bytes.fromhex(evm_hex_from_contract_id(TO_ADDR_B58)),
         int(datetime.datetime(2023, 12, 25, 0, 0).timestamp())
     ]))
 
@@ -46,7 +51,10 @@ def test_swap_exact_eth_for_token(backend: BackendInterface,
         pytest.xfail("Plugin binary is not loaded in this test environment")
     assert rapdu.status == Errors.OK
 
-    tx = build_trigger_tx(client, SWAP_CONTRACT_TRON_BYTES, data)
+    tx = build_trigger_tx(client,
+                          SWAP_CONTRACT_TRON_BYTES,
+                          data,
+                          call_value=SWAP_CALL_VALUE)
     text = "Sign" if firmware.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,

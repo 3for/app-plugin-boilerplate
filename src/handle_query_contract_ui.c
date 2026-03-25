@@ -107,7 +107,7 @@ static bool set_receive_ui(ethQueryContractUI_t *msg, const context_t *context) 
 
     // If the token look up failed, use the default network ticker along with the default decimals.
     if (!context->token_found) {
-        decimals = WEI_TO_ETHER;
+        decimals = SUN_TO_TRX;
         ticker = msg->network_ticker;
     }
 
@@ -124,20 +124,18 @@ static bool set_receive_ui(ethQueryContractUI_t *msg, const context_t *context) 
 static bool set_beneficiary_ui(ethQueryContractUI_t *msg, context_t *context) {
     strlcpy(msg->title, "Beneficiary", msg->titleLength);
 
-    // Prefix the address with `0x`.
-    msg->msg[0] = '0';
-    msg->msg[1] = 'x';
-
-    // We need a random chainID for legacy reasons with `getEthAddressStringFromBinary`.
-    // Setting it to `0` will make it work with every chainID :)
+    // Convert the stored 20-byte EVM-style address into a TRON Base58Check string.
+    char eth_address[(ADDRESS_LENGTH * 2) + 3];
     uint64_t chainid = 0;
 
-    // Get the string representation of the address stored in `context->beneficiary`. Put it in
-    // `msg->msg`.
-    return getEthAddressStringFromBinary(
-        context->beneficiary,
-        msg->msg + 2,  // +2 here because we've already prefixed with '0x'.
-        chainid);
+    if (!getEthDisplayableAddress(context->beneficiary,
+                                  eth_address,
+                                  sizeof(eth_address),
+                                  chainid)) {
+        return false;
+    }
+
+    return ethToTronBase58(eth_address, msg->msg, msg->msgLength);
 }
 
 

@@ -57,13 +57,16 @@ def load_contract_from_abi_fixture(abi_filename: str):
                                        evm_hex_from_contract_id(contract_id)))
 
 
-def build_trigger_tx(client: TronClient, contract_address_bytes: bytes,
-                     calldata: bytes) -> bytes:
+def build_trigger_tx(client: TronClient,
+                     contract_address_bytes: bytes,
+                     calldata: bytes,
+                     call_value: int = 0) -> bytes:
     return client.packContract(
         tron.Transaction.Contract.TriggerSmartContract,
         contract.TriggerSmartContract(
             owner_address=bytes.fromhex(client.getAccount(0)["addressHex"]),
             contract_address=contract_address_bytes,
+            call_value=call_value,
             data=calldata))
 
 
