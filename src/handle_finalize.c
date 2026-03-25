@@ -28,7 +28,7 @@ void handle_finalize(tronPluginFinalize_t *msg) {
             // token addresses you will info for (such as decimals, ticker...).
             msg->tokenLookup1 = msg->txContent->contractAddress;
             break;
-        case SWAP_EXACT_ETH_FOR_TOKENS:
+        case SWAP_EXACT_TRX_FOR_TOKENS:
             // EDIT THIS: Set the total number of screen you will need.
             msg->numScreens = 2;
             // EDIT THIS: Handle this case like you wish to (i.e. maybe no additional screen needed?).
@@ -48,6 +48,11 @@ void handle_finalize(tronPluginFinalize_t *msg) {
             msg->tokenLookup1 = context->token_received;
 
             break;
+        case BOILERPLATE_DUMMY_2:
+        default:
+            PRINTF("Selector index %d not supported in finalize\n", context->selectorIndex);
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
+            return;
     }
 
     msg->result = TRON_PLUGIN_RESULT_OK;

@@ -1,7 +1,7 @@
 #include "plugin.h"
 
 // EDIT THIS: Remove this function and write your own handlers!
-static void handle_swap_exact_eth_for_tokens(tronPluginProvideParameter_t *msg, context_t *context) {
+static void handle_SWAP_EXACT_TRX_FOR_TOKENS(tronPluginProvideParameter_t *msg, context_t *context) {
     if (context->go_to_offset) {
         if (msg->parameterOffset != context->offset + SELECTOR_SIZE) {
             return;
@@ -87,8 +87,8 @@ void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
         case TRANSFER_TO_VALUE:
             hanlde_transfer_to_value(msg, context);
             break;
-        case SWAP_EXACT_ETH_FOR_TOKENS:
-            handle_swap_exact_eth_for_tokens(msg, context);
+        case SWAP_EXACT_TRX_FOR_TOKENS:
+            handle_SWAP_EXACT_TRX_FOR_TOKENS(msg, context);
             break;
         case BOILERPLATE_DUMMY_2:
             break;

@@ -29,13 +29,13 @@ PATH_ADDR_0_B58 = "TTVHrJWLPEMpsRJLs14bAZTpfXB5HBmNRa"
 PATH_ADDR_1_B58 = "TKk5VY5HxbYJFc3nTr6XjV42n5LXdorkoB"
 TO_ADDR_B58 = "TVjpchRyV9wdpj6kmwqVsBDWY1J8PaFtnb"
 AMOUNT_OUT_MIN = int(Decimal("28.5") * 10**TRX_DECIMALS)
-def test_swap_exact_eth_for_token(backend: BackendInterface,
+def test_swap_exact_trx_for_token(backend: BackendInterface,
                                   firmware: Firmware,
                                   navigator: Navigator):
     client = TronClient(backend, firmware, navigator)
     force_external_plugin_reset(client)
 
-    data = abi_hex_to_bytes(contract.encode_abi("swapExactETHForTokens", [
+    data = abi_hex_to_bytes(contract.encode_abi("swapExactTRXForTokens", [
         AMOUNT_OUT_MIN,
         [
             bytes.fromhex(evm_hex_from_contract_id(PATH_ADDR_0_B58)),

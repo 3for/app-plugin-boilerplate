@@ -95,7 +95,7 @@ Please refer to the Ragger repository for a documentation on the many parameters
 
 ## Developing your tests
 
-The test provided in `test_swap.py` is a simple test of a successful parsing, display, and signature of smart contract `swapExactETHForTokens`.
+The test provided in `test_swap.py` is a simple test of a successful parsing, display, and signature of smart contract `swapExactTRXForTokens`.
 
 When forking the boilerplate to develop your own plugin, you will need to adapt the tests to use your own smart contract.
 

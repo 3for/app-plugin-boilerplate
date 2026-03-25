@@ -168,7 +168,7 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
                     PRINTF("Received an invalid screenIndex\n");
             }
             break;
-        case SWAP_EXACT_ETH_FOR_TOKENS:
+        case SWAP_EXACT_TRX_FOR_TOKENS:
             // EDIT THIS: Adapt the cases for the screens you'd like to display.
             switch (msg->screenIndex) {
                 case 0:
@@ -184,6 +184,10 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
                 default:
                     PRINTF("Received an invalid screenIndex\n");
             }
+            break;
+        case BOILERPLATE_DUMMY_2:
+        default:
+            PRINTF("Selector index %d not supported in query_contract_ui\n", context->selectorIndex);
             break;
     }
     msg->result = ret ? TRON_PLUGIN_RESULT_OK : TRON_PLUGIN_RESULT_ERROR;

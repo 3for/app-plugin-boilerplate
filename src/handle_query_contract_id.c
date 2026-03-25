@@ -11,7 +11,7 @@ void handle_query_contract_id(ethQueryContractID_t *msg) {
 
     // EDIT THIS: Adapt the cases by modifying the strings you pass to `strlcpy`.
     switch (context->selectorIndex) {
-        case SWAP_EXACT_ETH_FOR_TOKENS:
+        case SWAP_EXACT_TRX_FOR_TOKENS:
             strlcpy(msg->version, "Swap", msg->versionLength);
             break;
         case TRANSFER_TO_VALUE:

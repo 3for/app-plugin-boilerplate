@@ -44,7 +44,7 @@ void handle_init_contract(tronPluginInitContract_t *msg) {
         case TRANSFER_TO_VALUE:
             context->next_param = TO_ADDRESS;
             break;
-        case SWAP_EXACT_ETH_FOR_TOKENS:
+        case SWAP_EXACT_TRX_FOR_TOKENS:
             context->next_param = MIN_AMOUNT_RECEIVED;
             break;
         case BOILERPLATE_DUMMY_2:
