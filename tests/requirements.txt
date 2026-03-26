@@ -3,3 +3,4 @@ pytest
 ragger[speculos,ledgercomm]
 base58==2.1.1
 grpcio-tools
+web3

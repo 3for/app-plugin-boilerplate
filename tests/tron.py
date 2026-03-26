@@ -21,7 +21,6 @@ from ragger.bip import pack_derivation_path
 from ragger.error import ExceptionRAPDU
 from ragger.firmware import Firmware
 from .conftest import MNEMONIC
-from web3 import Web3
 from .client.command_builder import CommandBuilder
 
 from .client.command_builder import PKIPubKeyUsage
