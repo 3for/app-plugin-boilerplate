@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Run the same flow as tests/test_swap.py::test_swap_exact_eth_for_token
+Run the same flow as tests/test_send.py::test_sign_trc20_transfer
 on a real device:
 1) Build TriggerSmartContract(TRC20 transfer) payload.
 2) Send EXTERNAL_PLUGIN_SETUP (set_external_plugin).
@@ -24,6 +24,7 @@ from ecdsa import SigningKey
 from ecdsa.util import sigencode_der
 from eth_keys import KeyAPI
 from eth_keys.datatypes import PublicKey, Signature
+from eth_utils import keccak
 from ledgerblue.comm import getDongle
 from ledgerblue.commException import CommException
 
@@ -59,16 +60,15 @@ P1_SIGN = 0x10
 
 MAX_APDU_DATA_LEN = 255
 
-SELECTOR = bytes.fromhex("a9059cbb")
-TRC20_TRANSFER_DATA = bytes.fromhex(
-    "a9059cbb"
-    "000000000000000000000000364b03e0815687edaf90b81ff58e496dea7383d7"
-    "00000000000000000000000000000000000000000000000000000000000f4240"
-)
+# transfer(address to, uint256 value)
+TRC20_TRANSFER_SIGNATURE = "transfer(address,uint256)"
+DEFAULT_TRC20_TRANSFER_RECIPIENT = "TF17BgPaZYbz8oxbjhriubPDsA7ArKoLX3"
+DEFAULT_TRC20_TRANSFER_AMOUNT = 1_000_000
 EXTRA_CUSTOM_DATA = (
-    "In this section of the Developer Portal, you will find the resources to build, test and submit C and Rust apps, "
-    "Ethereum plugins and Cloned coins apps, compatible with all Ledger devices (Ledger Nano S+, Ledger Nano X, Ledger "
-    "Stax and Ledger Flex).This is a test case for extra data."
+    "TRON is an open-source public blockchain platform that supports smart contracts. Since TRON is compatible with "
+    "Ethereum, you can migrate smart contracts on Ethereum to TRON directly or only with minor modifications. TRON "
+    "relies on a unique consensus mechanism to realize the network's high TPS, which is far above Ethereum, bringing "
+    "developers a good experience with faster transactions."
 ).encode()
 
 
@@ -110,6 +110,17 @@ def parse_args() -> argparse.Namespace:
         help="Transaction fee_limit in sun, default: 100000000",
     )
     parser.add_argument(
+        "--to",
+        default=DEFAULT_TRC20_TRANSFER_RECIPIENT,
+        help=f"TRC20 transfer recipient, default: {DEFAULT_TRC20_TRANSFER_RECIPIENT}",
+    )
+    parser.add_argument(
+        "--amount",
+        type=int,
+        default=DEFAULT_TRC20_TRANSFER_AMOUNT,
+        help=f"TRC20 transfer amount in the token's smallest unit, default: {DEFAULT_TRC20_TRANSFER_AMOUNT}",
+    )
+    parser.add_argument(
         "--no-broadcast",
         action="store_true",
         help="Build/sign flow only, skip broadcast",
@@ -140,6 +151,36 @@ def build_apdu(ins: int, p1: int, p2: int, cdata: bytes = b"") -> bytes:
 
 def trx_address_to_hex(address: str) -> str:
     return base58.b58decode_check(address).hex().upper()
+
+
+def selector_from_signature(signature: str) -> bytes:
+    # TRON smart contract calldata follows the Ethereum ABI selector convention.
+    return keccak(text=signature)[:4]
+
+
+def evm_address_from_tron_base58(address: str) -> bytes:
+    decoded = base58.b58decode_check(address)
+    if len(decoded) != 21 or decoded[0] != 0x41:
+        raise ValueError(f"Invalid TRON address: {address}")
+    return decoded[1:]
+
+
+def encode_uint256(value: int) -> bytes:
+    if value < 0:
+        raise ValueError("uint256 value must be non-negative")
+    return value.to_bytes(32, byteorder="big")
+
+
+def encode_address(value: bytes) -> bytes:
+    if len(value) != 20:
+        raise ValueError(f"Address must be 20 bytes, got {len(value)}")
+    return value.rjust(32, b"\x00")
+
+
+def build_trc20_transfer_data(to_address: str, amount: int) -> bytes:
+    selector = selector_from_signature(TRC20_TRANSFER_SIGNATURE)
+    recipient = evm_address_from_tron_base58(to_address)
+    return selector + encode_address(recipient) + encode_uint256(amount)
 
 
 def read_plugin_name(makefile_path: Path) -> str:
@@ -265,13 +306,14 @@ def sign_and_optionally_broadcast(
     tx_ext,
     plugin_name: str,
     contract_address: bytes,
+    selector: bytes,
     cal_pem_path: Path,
     no_broadcast: bool,
     tx_label: str,
 ) -> bool:
     tx_raw = tx_ext.transaction.raw_data.SerializeToString()
 
-    plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, SELECTOR, cal_pem_path)
+    plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, selector, cal_pem_path)
     logger.info("[%s] EXTERNAL_PLUGIN_SETUP status: 0x%04X", tx_label, plugin_sw)
 
     logger.info("[%s] Please review the transaction on the Ledger device and approve it...", tx_label)
@@ -305,6 +347,11 @@ def main() -> int:
 
     plugin_name = read_plugin_name(makefile_path)
     contract_address = bytes.fromhex(trx_address_to_hex(args.contract))
+    transfer_selector = selector_from_signature(TRC20_TRANSFER_SIGNATURE)
+    trc20_transfer_data = build_trc20_transfer_data(
+        args.to,
+        args.amount,
+    )
 
     dongle = getDongle(True)
     channel = grpc.insecure_channel(args.grpc_endpoint)
@@ -314,12 +361,14 @@ def main() -> int:
         logger.info("Using account: %s (%s)", account.address, account.path)
         logger.info("Plugin name: %s", plugin_name)
         logger.info("gRPC endpoint: %s", args.grpc_endpoint)
+        logger.info("Transfer recipient: %s", args.to)
+        logger.info("Transfer amount: %d", args.amount)
 
         tx_ext = build_trigger_smart_contract_tx(
             stub=stub,
             owner_address_hex=account.address_hex,
             contract_address=contract_address,
-            data=TRC20_TRANSFER_DATA,
+            data=trc20_transfer_data,
         )
         tx_ext.transaction.raw_data.fee_limit = args.fee_limit
         if not sign_and_optionally_broadcast(
@@ -329,6 +378,7 @@ def main() -> int:
             tx_ext=tx_ext,
             plugin_name=plugin_name,
             contract_address=contract_address,
+            selector=transfer_selector,
             cal_pem_path=cal_pem_path,
             no_broadcast=args.no_broadcast,
             tx_label="tx-1",
@@ -339,7 +389,7 @@ def main() -> int:
             stub=stub,
             owner_address_hex=account.address_hex,
             contract_address=contract_address,
-            data=TRC20_TRANSFER_DATA,
+            data=trc20_transfer_data,
         )
         tx_ext_with_custom_data.transaction.raw_data.fee_limit = args.fee_limit
         tx_ext_with_custom_data.transaction.raw_data.data = EXTRA_CUSTOM_DATA
@@ -354,6 +404,7 @@ def main() -> int:
             tx_ext=tx_ext_with_custom_data,
             plugin_name=plugin_name,
             contract_address=contract_address,
+            selector=transfer_selector,
             cal_pem_path=cal_pem_path,
             no_broadcast=args.no_broadcast,
             tx_label="tx-2-with-custom-data",

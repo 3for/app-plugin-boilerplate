@@ -27,8 +27,9 @@ TRC20_TRANSFER_RECIPIENT_B58 = "TEvHMZWyfjCAdDJEKYxYVL8rRpigddLC1R"
 TRC20_TRANSFER_RECIPIENT_HEX = evm_hex_from_contract_id(TRC20_TRANSFER_RECIPIENT_B58)
 TRC20_TRANSFER_AMOUNT = 1_000_000
 TRC20_EXTRA_PARAMETER = (1).to_bytes(32, byteorder="big")
-TRC20_SWAP_SELECTOR = bytes.fromhex("7ff36ab5")
+TRC20_SWAP_SELECTOR = bytes.fromhex("1cf4401e")
 TRC20_CONTRACT = load_contract_from_abi_fixture(TRC20_ABI_FILENAME)
+# transfer(address to, uint256 value)
 TRC20_TRANSFER_CALLDATA = abi_hex_to_bytes(
     TRC20_CONTRACT.encode_abi(
         "transfer",
