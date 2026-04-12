@@ -7,6 +7,10 @@ on a real device:
 2) Send EXTERNAL_PLUGIN_SETUP (set_external_plugin).
 3) Sign with SIGN_EXTERNAL_PLUGIN (include tx length) and verify signature.
 4) Broadcast signed transaction.
+
+Requires a Tron app build compiled with `use_test_keys` because the example
+uses the test CAL key from `tests/keychain/cal.pem` to authorize the plugin
+metadata APDU.
 """
 
 import argparse
@@ -16,6 +20,7 @@ from pathlib import Path
 import grpc
 from ledgerblue.comm import getDongle
 from example_helpers import (ROOT_DIR, WalletStub, build_trigger_smart_contract_tx,
+                             ensure_requested_app,
                              encode_address, encode_uint256,
                              evm_address_bytes_from_contract_id, get_account,
                              read_plugin_name, selector_from_signature,
@@ -54,6 +59,12 @@ EXTRA_CUSTOM_DATA = (
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run TRC20 clear-sign flow with external plugin setup")
+    parser.add_argument("--device", help="Ledger device name to use when auto-opening the Tron app.")
+    parser.add_argument("--app-name", default="Tron", help="Dashboard application to open.")
+    parser.add_argument("--skip-open-app", action="store_true",
+                        help="Do not try to switch to the Tron app automatically.")
+    parser.add_argument("--with-gui", action="store_true",
+                        help="Show Ragger's helper GUI for physical-device actions.")
     parser.add_argument("--path", default="44'/195'/0'/0/0", help="BIP32 path, default: 44'/195'/0'/0/0")
     parser.add_argument(
         "--contract",
@@ -119,6 +130,13 @@ def main() -> int:
         args.amount,
     )
 
+    ensure_requested_app(
+        requested_app=args.app_name,
+        device_name=args.device,
+        skip_open_app=args.skip_open_app,
+        with_gui=args.with_gui,
+        logger=logger,
+    )
     dongle = getDongle(True)
     channel = grpc.insecure_channel(args.grpc_endpoint)
     stub = WalletStub(channel)

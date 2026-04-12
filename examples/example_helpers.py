@@ -140,6 +140,88 @@ def sign_with_cal(cal_pem_path: Path, payload: bytes) -> bytes:
     return signing_key.sign_deterministic(payload, sigencode=sigencode_der)
 
 
+def _list_connected_devices():
+    try:
+        from ledgered.devices import Devices
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Missing optional dependency `ledgered`. Install the physical-device helpers to auto-open apps."
+        ) from exc
+    return list(Devices())
+
+
+def get_connected_device(device_name: Optional[str] = None):
+    devices = _list_connected_devices()
+    if not devices:
+        raise RuntimeError("No Ledger device detected.")
+
+    if device_name is None:
+        if len(devices) == 1:
+            return devices[0]
+        available = ", ".join(device.name for device in devices)
+        raise RuntimeError(f"Multiple Ledger devices detected. Pass --device. Available devices: {available}")
+
+    for device in devices:
+        if device.name == device_name:
+            return device
+
+    available = ", ".join(device.name for device in devices)
+    raise RuntimeError(f"Unsupported device '{device_name}'. Available devices: {available}")
+
+
+def ensure_requested_app(
+    *,
+    requested_app: str,
+    device_name: Optional[str] = None,
+    skip_open_app: bool = False,
+    with_gui: bool = False,
+    logger=None,
+) -> None:
+    if skip_open_app:
+        return
+
+    try:
+        from ragger.backend import LedgerCommBackend
+        from ragger.utils.misc import (exit_current_app, get_current_app_name_and_version,
+                                       open_app_from_dashboard)
+    except ModuleNotFoundError as exc:
+        raise RuntimeError(
+            "Missing optional dependency `ragger`. Install it to auto-open apps from the dashboard."
+        ) from exc
+
+    device = get_connected_device(device_name)
+    with LedgerCommBackend(device=device, interface="hid", with_gui=with_gui) as backend:
+        app_name, version = get_current_app_name_and_version(backend)
+        if logger is not None:
+            logger.info("Device reports current app: %s %s", app_name, version)
+
+        if app_name == requested_app:
+            return
+
+        if app_name != "BOLOS":
+            if logger is not None:
+                logger.info("Closing currently open app '%s'", app_name)
+            exit_current_app(backend)
+            backend.handle_usb_reset()
+            app_name, version = get_current_app_name_and_version(backend)
+            if logger is not None:
+                logger.info("After exit: %s %s", app_name, version)
+
+        if app_name != "BOLOS":
+            raise RuntimeError(f"Unable to reach the dashboard, current app is still '{app_name}'")
+
+        if logger is not None:
+            logger.info("Opening '%s' from the dashboard", requested_app)
+        open_app_from_dashboard(backend, requested_app)
+        backend.handle_usb_reset()
+        app_name, version = get_current_app_name_and_version(backend)
+        if logger is not None:
+            logger.info("Current app after open: %s %s", app_name, version)
+
+        if app_name != requested_app:
+            raise RuntimeError(f"Expected '{requested_app}', got '{app_name}'")
+
+
 def get_account(dongle, path: str) -> Account:
     payload = pack_derivation_path(path)
     response = dongle.exchange(build_apdu(INS_GET_PUBLIC_KEY, 0x00, 0x00, payload))
@@ -209,6 +291,14 @@ def setup_external_plugin(
         return 0x9000
     except CommException as exc:
         status = getattr(exc, "sw", getattr(exc, "status", None))
+        if status == 0x6A80:
+            raise RuntimeError(
+                "EXTERNAL_PLUGIN_SETUP was rejected with 0x6A80. "
+                "These examples sign plugin metadata with the test CAL key in "
+                "`tests/keychain/cal.pem`, so they require a Tron app build compiled "
+                "with `use_test_keys` plus the matching plugin binary. "
+                "A production Tron app installed from Ledger Live will reject this setup."
+            ) from exc
         if status in (0x6984,):
             return status
         raise
