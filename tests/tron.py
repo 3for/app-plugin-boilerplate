@@ -19,7 +19,6 @@ from ragger.backend.interface import BackendInterface, RAPDU
 from ragger.navigator import NavInsID, NavIns
 from ragger.bip import pack_derivation_path
 from ragger.error import ExceptionRAPDU
-from ragger.firmware import Firmware
 from .conftest import MNEMONIC
 from .client.command_builder import CommandBuilder
 
@@ -165,11 +164,11 @@ class TronClient:
     HOST, PORT = ('127.0.0.1', 9999)
     CLA = 0xE0
 
-    def __init__(self, client: BackendInterface, firmware, navigator):
+    def __init__(self, client: BackendInterface, device, navigator):
         if not isinstance(client, BackendInterface):
             raise TypeError('client must be an instance of BackendInterface')
         self._client = client
-        self._firmware = firmware
+        self._device = device
         self._navigator = navigator
         self.accounts = [None, None]
         self.hardware = True
@@ -254,37 +253,35 @@ class TronClient:
             return newpos
         return size + newpos
 
-    def navigate(self,
-                 snappath: Path = None,
-                 text: str = "",
-                 warning_approve: bool = False):
-        if self._firmware.is_nano:
+    def navigate(
+            self,
+            snappath: Path = None,
+            text: str = "",
+            warning_approve: bool = False,
+            warning_instruction: NavInsID = NavInsID.USE_CASE_CHOICE_CONFIRM):
+        if self._device.is_nano:
+            path_name = ""
+            screen_change_before_first_instruction = True
+            if warning_approve:
+                self._navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
+                                                     str(snappath) + "/part1",
+                                                     [NavInsID.BOTH_CLICK])
+                path_name = "/part2"
+                screen_change_before_first_instruction = False
             self._navigator.navigate_until_text_and_compare(
                 NavIns(NavInsID.RIGHT_CLICK), [NavIns(NavInsID.BOTH_CLICK)],
                 text,
                 ROOT_SCREENSHOT_PATH,
-                snappath,
-                screen_change_before_first_instruction=True)
+                str(snappath) + path_name,
+                screen_change_before_first_instruction=
+                screen_change_before_first_instruction)
         else:
             path_name = ""
             screen_change_before_first_instruction = True
             if warning_approve:
-                # Use custom touch coordinates to account for warning approve
-                # button position.
-                instructions = [
-                    NavIns(
-                        NavInsID.TOUCH,
-                        (200 if self._firmware.device.startswith("stax") else
-                         200 if self._firmware.device.startswith("flex") else
-                         150 if self._firmware.device.startswith("apex") else
-                         200, 545 if self._firmware.device.startswith("stax")
-                         else 445 if self._firmware.device.startswith("flex")
-                         else 315 if self._firmware.device.startswith(
-                             "apex") else 545)),
-                ]
                 self._navigator.navigate_and_compare(ROOT_SCREENSHOT_PATH,
                                                      str(snappath) + "/part1",
-                                                     instructions)
+                                                     [warning_instruction])
                 path_name = "/part2"
                 screen_change_before_first_instruction = False
             self._navigator.navigate_until_text_and_compare(

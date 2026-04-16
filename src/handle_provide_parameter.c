@@ -70,6 +70,23 @@ static void hanlde_transfer_to_value(tronPluginProvideParameter_t *msg, context_
     }
 }
 
+static void handle_mint(tronPluginProvideParameter_t *msg, context_t *context) {
+    switch (context->next_param) {
+        case MINT_RAW_VALUE:  // rawValue (uint256)
+            copy_parameter(context->value, msg->parameter, sizeof(context->value));
+            context->next_param = MINT_SKIP;
+            break;
+        case MINT_SKIP:
+            // Remaining parameters (output[9], bindingSignature[2], c[21]) are
+            // cryptographic data not displayed on screen; skip them silently.
+            break;
+        default:
+            PRINTF("Param not supported: %d\n", context->next_param);
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
+            break;
+    }
+}
+
 void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     // We use `%.*H`: it's a utility function to print bytes. You first give
@@ -91,6 +108,9 @@ void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
             handle_SWAP_EXACT_TRX_FOR_TOKENS(msg, context);
             break;
         case BOILERPLATE_DUMMY_2:
+            break;
+        case MINT:
+            handle_mint(msg, context);
             break;
         default:
             PRINTF("Selector Index not supported: %d\n", context->selectorIndex);

@@ -28,7 +28,8 @@
 #define SELECTORS_LIST(X)                    \
     X(TRANSFER_TO_VALUE, 0xa9059cbb) \
     X(SWAP_EXACT_TRX_FOR_TOKENS, 0x1cf4401e) \
-    X(BOILERPLATE_DUMMY_2, 0x13374242)
+    X(BOILERPLATE_DUMMY_2, 0x13374242) \
+    X(MINT, 0x855d175e)
 
 // Xmacro helpers to define the enum and map
 // Do not modify !
@@ -57,6 +58,8 @@ typedef enum {
     UNEXPECTED_PARAMETER,
     TO_ADDRESS,
     VALUE,
+    MINT_RAW_VALUE,
+    MINT_SKIP,
 } parameter;
 
 // Shared global memory with Ethereum app. Must be at most 5 * 32 bytes.

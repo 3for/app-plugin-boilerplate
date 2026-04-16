@@ -142,7 +142,7 @@ def sign_with_cal(cal_pem_path: Path, payload: bytes) -> bytes:
 
 def _list_connected_devices():
     try:
-        from ledgered.devices import Devices
+        from ledgered.devices import Device
     except ModuleNotFoundError as exc:
         raise RuntimeError(
             "Missing optional dependency `ledgered`. Install the physical-device helpers to auto-open apps."

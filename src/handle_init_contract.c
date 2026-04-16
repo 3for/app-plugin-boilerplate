@@ -50,6 +50,9 @@ void handle_init_contract(tronPluginInitContract_t *msg) {
         case BOILERPLATE_DUMMY_2:
             context->next_param = TOKEN_RECEIVED;
             break;
+        case MINT:
+            context->next_param = MINT_RAW_VALUE;
+            break;
         // Keep this
         default:
             PRINTF("Missing selectorIndex: %d\n", context->selectorIndex);

@@ -4,7 +4,7 @@ import pytest
 from ragger.backend import BackendInterface
 from ragger.bip import pack_derivation_path
 from ragger.error import ExceptionRAPDU
-from ragger.firmware import Firmware
+from ledgered.devices import Device
 from ragger.navigator import Navigator
 from inspect import currentframe
 
@@ -61,16 +61,16 @@ def test_setup_rejects_short_payload(backend: BackendInterface):
 
 
 def test_setup_rejects_name_too_long(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     rapdu = setup_external_plugin(backend, "x" * 30, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
     assert rapdu.status == Errors.INCORRECT_DATA
 
 
 def test_setup_rejects_invalid_signature(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     rapdu = setup_external_plugin(backend,
                                   PLUGIN_NAME,
                                   contract_address(),
@@ -80,8 +80,8 @@ def test_setup_rejects_invalid_signature(
 
 
 def test_setup_returns_plugin_not_found(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     try:
         rapdu = setup_external_plugin(backend, "missingPlugin",
                                       contract_address(),
@@ -97,8 +97,8 @@ def test_setup_returns_plugin_not_found(
 
 
 def test_sign_rejects_when_plugin_not_configured(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     tx = build_trc20_transfer_tx(client)
     with pytest.raises(ExceptionRAPDU) as err:
@@ -111,8 +111,8 @@ def test_sign_rejects_when_plugin_not_configured(
 
 
 def test_sign_rejects_nonzero_p2(backend: BackendInterface,
-                                                 firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+                                                 device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
         backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_SIGN, 0x01, b"")
@@ -120,8 +120,8 @@ def test_sign_rejects_nonzero_p2(backend: BackendInterface,
 
 
 def test_sign_rejects_unknown_p1(backend: BackendInterface,
-                                                 firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+                                                 device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
         backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, 0x7F, 0x00, b"")
@@ -129,8 +129,8 @@ def test_sign_rejects_unknown_p1(backend: BackendInterface,
 
 
 def test_sign_rejects_more_without_init(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
         backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_MORE, 0x00, b"")
@@ -138,8 +138,8 @@ def test_sign_rejects_more_without_init(
 
 
 def test_sign_rejects_invalid_bip32_path(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     with pytest.raises(ExceptionRAPDU) as err:
         backend.exchange(CLA, InsType.SIGN_EXTERNAL_PLUGIN, P1_FIRST, 0x00, b"\x05")
@@ -148,8 +148,8 @@ def test_sign_rejects_invalid_bip32_path(
 
 
 def test_sign_requires_tx_len_after_path(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     # Build only a valid derivation path payload, without the mandatory tx length field.
     with pytest.raises(ExceptionRAPDU) as err:
@@ -160,8 +160,8 @@ def test_sign_requires_tx_len_after_path(
 
 
 def test_sign_rejects_selector_mismatch(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_SWAP_SELECTOR)
@@ -180,8 +180,8 @@ def test_sign_rejects_selector_mismatch(
 
 
 def test_sign_rejects_contract_mismatch(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     wrong_contract = bytes.fromhex(client.getAccount(1)["addressHex"])
     rapdu = setup_external_plugin(backend, PLUGIN_NAME, wrong_contract,
@@ -201,8 +201,8 @@ def test_sign_rejects_contract_mismatch(
 
 
 def test_sign_rejects_extra_parameter(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
@@ -223,8 +223,8 @@ def test_sign_rejects_extra_parameter(
 
 
 def test_sign_rejects_non_tron_contract(
-        backend: BackendInterface, firmware: Firmware):
-    client = TronClient(backend, firmware, None)
+        backend: BackendInterface, device: Device):
+    client = TronClient(backend, device, None)
     force_external_plugin_reset(client)
     non_tron_contract = bytes.fromhex("42" + ("11" * 20))
     rapdu = setup_external_plugin(backend, PLUGIN_NAME, non_tron_contract,
@@ -244,9 +244,9 @@ def test_sign_rejects_non_tron_contract(
 
 
 def test_sign_trc20_transfer(backend: BackendInterface,
-                                              firmware: Firmware,
+                                              device: Device,
                                               navigator: Navigator):
-    client = TronClient(backend, firmware, navigator)
+    client = TronClient(backend, device, navigator)
     force_external_plugin_reset(client)
     rapdu = setup_external_plugin(backend, PLUGIN_NAME, contract_address(),
                                   TRC20_TRANSFER_SELECTOR)
@@ -263,7 +263,7 @@ def test_sign_trc20_transfer(backend: BackendInterface,
     assert rapdu.status == Errors.OK
 
     tx = build_trc20_transfer_tx(client)
-    text = "Sign" if firmware.is_nano else "Hold to sign"
+    text = "Sign" if device.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,
                        snappath=Path(currentframe().f_code.co_name),

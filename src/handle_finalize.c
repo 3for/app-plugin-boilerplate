@@ -48,6 +48,10 @@ void handle_finalize(tronPluginFinalize_t *msg) {
             msg->tokenLookup1 = context->token_received;
 
             break;
+        case MINT:
+            msg->numScreens = 2;
+            msg->tokenLookup1 = msg->txContent->contractAddress;
+            break;
         case BOILERPLATE_DUMMY_2:
         default:
             PRINTF("Selector index %d not supported in finalize\n", context->selectorIndex);

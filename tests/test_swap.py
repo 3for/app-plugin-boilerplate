@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 from ragger.backend import BackendInterface
-from ragger.firmware import Firmware
+from ledgered.devices import Device
 from ragger.navigator import Navigator
 from pathlib import Path
 from inspect import currentframe
@@ -30,9 +30,9 @@ PATH_ADDR_1_B58 = "TKk5VY5HxbYJFc3nTr6XjV42n5LXdorkoB"
 TO_ADDR_B58 = "TVjpchRyV9wdpj6kmwqVsBDWY1J8PaFtnb"
 AMOUNT_OUT_MIN = int(Decimal("28.5") * 10**TRX_DECIMALS)
 def test_swap_exact_trx_for_token(backend: BackendInterface,
-                                  firmware: Firmware,
+                                  device: Device,
                                   navigator: Navigator):
-    client = TronClient(backend, firmware, navigator)
+    client = TronClient(backend, device, navigator)
     force_external_plugin_reset(client)
 
     data = abi_hex_to_bytes(contract.encode_abi("swapExactTRXForTokens", [
@@ -55,7 +55,7 @@ def test_swap_exact_trx_for_token(backend: BackendInterface,
                           SWAP_CONTRACT_TRON_BYTES,
                           data,
                           call_value=SWAP_CALL_VALUE)
-    text = "Sign" if firmware.is_nano else "Hold to sign"
+    text = "Sign" if device.is_nano else "Hold to sign"
     resp = client.sign(client.getAccount(0)["path"],
                        tx,
                        snappath=Path(currentframe().f_code.co_name),
