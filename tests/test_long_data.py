@@ -19,7 +19,7 @@ sys.path.append(f"{Path(__file__).parent.parent.resolve()}/build/proto")
 from core import Tron_pb2 as tron
 from core.contract import smart_contract_pb2 as contract
 
-MINT_CONTRACT_B58 = "TBoTZcARzWVgnNuB9SyE3S5g1RwsXoQL16"
+MINT_CONTRACT_B58 = "TNnFMMykZzwhPZkurKtNMyVGvgeSkCrnPi"
 MINT_CONTRACT_BYTES = tron_contract_bytes_from_contract_id(MINT_CONTRACT_B58)
 TRON_MAINNET_CHAIN_ID = 1151668124
 
@@ -83,9 +83,9 @@ def test_sign_long_trigger_smart_contract(backend: BackendInterface,
         pytest.xfail("Plugin binary is not loaded in this test environment")
     assert rapdu.status == Errors.OK
 
-    rapdu = provide_trc20_token_information(backend, "USDT",
+    rapdu = provide_trc20_token_information(backend, "JST",
                                             MINT_CONTRACT_BYTES,
-                                            6,
+                                            18,
                                             TRON_MAINNET_CHAIN_ID)
     assert rapdu.status == Errors.OK
 
