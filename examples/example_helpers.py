@@ -41,6 +41,7 @@ CLA = 0xE0
 INS_GET_PUBLIC_KEY = 0x02
 INS_SIGN_EXTERNAL_PLUGIN = 0xC4
 INS_EXTERNAL_PLUGIN_SETUP = 0x12
+INS_PROVIDE_TRC20_TOKEN_INFORMATION = 0xCA
 
 P1_FIRST = 0x00
 P1_MORE = 0x80
@@ -56,6 +57,14 @@ class Account:
     public_key_hex: str
     address: str
     address_hex: str
+
+
+@dataclass
+class TokenInformation:
+    ticker: str
+    contract_address: bytes
+    decimals: int
+    chain_id: int
 
 
 def pack_derivation_path(path: str) -> bytes:
@@ -79,12 +88,35 @@ def build_apdu(ins: int, p1: int, p2: int, cdata: bytes = b"") -> bytes:
     return bytes([CLA, ins, p1, p2, len(cdata)]) + cdata
 
 
+def comm_status(exc: CommException) -> Optional[int]:
+    return getattr(exc, "sw", getattr(exc, "status", None))
+
+
+def describe_comm_status(status: Optional[int]) -> str:
+    if status is None:
+        return "unknown status"
+
+    known = {
+        0x5515: "device is locked; unlock it with the PIN",
+        0x6511: "the opened app did not accept the APDU; unlock the device and open the Tron app",
+        0x6982: "security status not satisfied; unlock the device and check app permissions",
+        0x6985: "request denied on the device",
+        0x6A80: "invalid data received by the app",
+        0x6D00: "instruction not supported; verify that the Tron app is open",
+        0x6E00: "CLA not supported; verify that the Tron app is open",
+    }
+    message = known.get(status, "unknown reason")
+    return f"0x{status:04X} ({message})"
+
+
 def trx_address_to_hex(address: str) -> str:
     return base58.b58decode_check(address).hex().upper()
 
 
 def evm_hex_from_contract_id(contract_id: str) -> str:
     if contract_id.startswith("0x"):
+        contract_id = contract_id[2:]
+    if len(contract_id) == 42 and contract_id.startswith("41"):
         return contract_id[2:]
     if len(contract_id) == 40:
         return contract_id
@@ -98,6 +130,8 @@ def evm_address_bytes_from_contract_id(contract_id: str) -> bytes:
 def tron_contract_bytes_from_contract_id(contract_id: str) -> bytes:
     if contract_id.startswith("0x"):
         contract_id = contract_id[2:]
+    if len(contract_id) == 42 and contract_id.startswith("41"):
+        return bytes.fromhex(contract_id)
     if len(contract_id) == 40:
         return bytes.fromhex(f"41{contract_id}")
     return base58.b58decode_check(contract_id)
@@ -142,7 +176,7 @@ def sign_with_cal(cal_pem_path: Path, payload: bytes) -> bytes:
 
 def _list_connected_devices():
     try:
-        from ledgered.devices import Device
+        from ledgered.devices import Devices
     except ModuleNotFoundError as exc:
         raise RuntimeError(
             "Missing optional dependency `ledgered`. Install the physical-device helpers to auto-open apps."
@@ -224,7 +258,15 @@ def ensure_requested_app(
 
 def get_account(dongle, path: str) -> Account:
     payload = pack_derivation_path(path)
-    response = dongle.exchange(build_apdu(INS_GET_PUBLIC_KEY, 0x00, 0x00, payload))
+    try:
+        response = dongle.exchange(build_apdu(INS_GET_PUBLIC_KEY, 0x00, 0x00, payload))
+    except CommException as exc:
+        raise RuntimeError(
+            "GET_PUBLIC_KEY failed with "
+            f"{describe_comm_status(comm_status(exc))}. "
+            "If you passed --skip-open-app, make sure the Ledger is unlocked "
+            "and already inside the Tron app, or rerun without --skip-open-app."
+        ) from exc
 
     public_key_len = response[0]
     if public_key_len != 65:
@@ -251,12 +293,16 @@ def build_trigger_smart_contract_tx(
     contract_address: bytes,
     data: bytes,
     call_value: int = 0,
+    call_token_value: int = 0,
+    token_id: int = 0,
 ):
     tx_ext = stub.TriggerContract(
         smart_contract.TriggerSmartContract(
             owner_address=bytes.fromhex(owner_address_hex),
             contract_address=contract_address,
             call_value=call_value,
+            call_token_value=call_token_value,
+            token_id=token_id,
             data=data,
         )
     )
@@ -301,6 +347,41 @@ def setup_external_plugin(
             ) from exc
         if status in (0x6984,):
             return status
+        raise
+
+
+def provide_trc20_token_information(
+    dongle,
+    token_information: TokenInformation,
+    cal_pem_path: Path,
+) -> int:
+    payload = bytearray()
+    payload.append(len(token_information.ticker))
+    payload += token_information.ticker.encode()
+    payload += token_information.contract_address
+    payload += struct.pack(">I", token_information.decimals)
+    payload += struct.pack(">I", token_information.chain_id)
+
+    sig = sign_with_cal(cal_pem_path, bytes(payload[1:]))
+    apdu = build_apdu(
+        INS_PROVIDE_TRC20_TOKEN_INFORMATION,
+        0x00,
+        0x00,
+        bytes(payload) + sig,
+    )
+
+    try:
+        dongle.exchange(apdu)
+        return 0x9000
+    except CommException as exc:
+        status = getattr(exc, "sw", getattr(exc, "status", None))
+        if status == 0x6A80:
+            raise RuntimeError(
+                "PROVIDE_TRC20_TOKEN_INFORMATION was rejected with 0x6A80. "
+                "These examples sign token metadata with the test CAL key in "
+                "`tests/keychain/cal.pem`, so they require a Tron app build compiled "
+                "with `use_test_keys`."
+            ) from exc
         raise
 
 
@@ -359,12 +440,23 @@ def sign_and_optionally_broadcast(
     cal_pem_path: Path,
     no_broadcast: bool,
     tx_label: Optional[str] = None,
+    token_information: Optional[TokenInformation] = None,
 ) -> bool:
     prefix = _log_prefix(tx_label)
     tx_raw = tx_ext.transaction.raw_data.SerializeToString()
 
     plugin_sw = setup_external_plugin(dongle, plugin_name, contract_address, selector, cal_pem_path)
     logger.info("%sEXTERNAL_PLUGIN_SETUP status: 0x%04X", prefix, plugin_sw)
+
+    if token_information is not None:
+        token_sw = provide_trc20_token_information(dongle, token_information, cal_pem_path)
+        logger.info(
+            "%sPROVIDE_TRC20_TOKEN_INFORMATION status: 0x%04X (%s, %d decimals)",
+            prefix,
+            token_sw,
+            token_information.ticker,
+            token_information.decimals,
+        )
 
     logger.info("%sPlease review the transaction on the Ledger device and approve it...", prefix)
     sign_resp = external_plugin_sign(dongle, account.path, tx_raw)
