@@ -94,6 +94,26 @@ static void handle_shielded_transfer(tronPluginProvideParameter_t *msg, context_
     // amount or recipient to display. Accept each streamed ABI word.
 }
 
+static void handle_burn(tronPluginProvideParameter_t *msg, context_t *context) {
+    switch (context->next_param) {
+        case BURN_RAW_VALUE:
+            // burn(input[10], spendAuthoritySignature[2], rawValue, ...)
+            if (msg->parameterOffset != SELECTOR_SIZE + (12 * PARAMETER_LENGTH)) {
+                return;
+            }
+            copy_parameter(context->value, msg->parameter, sizeof(context->value));
+            context->next_param = BURN_SKIP;
+            break;
+        case BURN_SKIP:
+            // Remaining parameters are shielded note/signature data not shown on screen.
+            break;
+        default:
+            PRINTF("Param not supported: %d\n", context->next_param);
+            msg->result = TRON_PLUGIN_RESULT_ERROR;
+            break;
+    }
+}
+
 void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     // We use `%.*H`: it's a utility function to print bytes. You first give
@@ -121,6 +141,9 @@ void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
             break;
         case SHIELDED_TRANSFER:
             handle_shielded_transfer(msg, context);
+            break;
+        case BURN:
+            handle_burn(msg, context);
             break;
         default:
             PRINTF("Selector Index not supported: %d\n", context->selectorIndex);

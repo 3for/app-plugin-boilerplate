@@ -56,6 +56,9 @@ void handle_init_contract(tronPluginInitContract_t *msg) {
         case SHIELDED_TRANSFER:
             context->next_param = SHIELDED_TRANSFER_SKIP;
             break;
+        case BURN:
+            context->next_param = BURN_RAW_VALUE;
+            break;
         // Keep this
         default:
             PRINTF("Missing selectorIndex: %d\n", context->selectorIndex);
