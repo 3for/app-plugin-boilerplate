@@ -197,6 +197,15 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
                     PRINTF("Received an invalid screenIndex\n");
             }
             break;
+        case SHIELDED_TRANSFER:
+            switch (msg->screenIndex) {
+                case 0:
+                    ret = set_contract_ui(msg, context);
+                    break;
+                default:
+                    PRINTF("Received an invalid screenIndex\n");
+            }
+            break;
         case BOILERPLATE_DUMMY_2:
         default:
             PRINTF("Selector index %d not supported in query_contract_ui\n", context->selectorIndex);

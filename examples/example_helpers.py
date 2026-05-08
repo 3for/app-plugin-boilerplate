@@ -100,6 +100,7 @@ def describe_comm_status(status: Optional[int]) -> str:
         0x5515: "device is locked; unlock it with the PIN",
         0x6511: "the opened app did not accept the APDU; unlock the device and open the Tron app",
         0x6982: "security status not satisfied; unlock the device and check app permissions",
+        0x6984: "external plugin unavailable; verify the plugin is loaded and supports this selector",
         0x6985: "request denied on the device",
         0x6A80: "invalid data received by the app",
         0x6D00: "instruction not supported; verify that the Tron app is open",
@@ -459,7 +460,19 @@ def sign_and_optionally_broadcast(
         )
 
     logger.info("%sPlease review the transaction on the Ledger device and approve it...", prefix)
-    sign_resp = external_plugin_sign(dongle, account.path, tx_raw)
+    try:
+        sign_resp = external_plugin_sign(dongle, account.path, tx_raw)
+    except CommException as exc:
+        status = comm_status(exc)
+        if status == 0x6984:
+            raise RuntimeError(
+                "SIGN_EXTERNAL_PLUGIN was rejected with 0x6984. The external plugin was found "
+                "during setup, but the Tron app could not use it for this transaction. "
+                "Rebuild/reload the plugin and verify it registers the requested selector."
+            ) from exc
+        raise RuntimeError(
+            f"SIGN_EXTERNAL_PLUGIN failed with {describe_comm_status(status)}"
+        ) from exc
     signature = sign_resp[:65]
 
     valid = verify_tx_signature(tx_raw, signature, account.public_key_hex[2:])

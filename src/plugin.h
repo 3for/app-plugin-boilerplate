@@ -29,7 +29,8 @@
     X(TRANSFER_TO_VALUE, 0xa9059cbb) \
     X(SWAP_EXACT_TRX_FOR_TOKENS, 0x1cf4401e) \
     X(BOILERPLATE_DUMMY_2, 0x13374242) \
-    X(MINT, 0x855d175e)
+    X(MINT, 0x855d175e) \
+    X(SHIELDED_TRANSFER, 0x9110a55b)
 
 // Xmacro helpers to define the enum and map
 // Do not modify !
@@ -60,6 +61,7 @@ typedef enum {
     VALUE,
     MINT_RAW_VALUE,
     MINT_SKIP,
+    SHIELDED_TRANSFER_SKIP,
 } parameter;
 
 // Shared global memory with Ethereum app. Must be at most 5 * 32 bytes.

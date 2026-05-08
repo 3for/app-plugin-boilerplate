@@ -87,6 +87,13 @@ static void handle_mint(tronPluginProvideParameter_t *msg, context_t *context) {
     }
 }
 
+static void handle_shielded_transfer(tronPluginProvideParameter_t *msg, context_t *context) {
+    (void) msg;
+    (void) context;
+    // Shielded transfer parameters are cryptographic note data with no clear
+    // amount or recipient to display. Accept each streamed ABI word.
+}
+
 void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     // We use `%.*H`: it's a utility function to print bytes. You first give
@@ -111,6 +118,9 @@ void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
             break;
         case MINT:
             handle_mint(msg, context);
+            break;
+        case SHIELDED_TRANSFER:
+            handle_shielded_transfer(msg, context);
             break;
         default:
             PRINTF("Selector Index not supported: %d\n", context->selectorIndex);

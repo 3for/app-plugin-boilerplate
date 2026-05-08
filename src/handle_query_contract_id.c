@@ -20,6 +20,9 @@ void handle_query_contract_id(ethQueryContractID_t *msg) {
         case MINT:
             strlcpy(msg->version, "Mint", msg->versionLength);
             break;
+        case SHIELDED_TRANSFER:
+            strlcpy(msg->version, "Shielded Transfer", msg->versionLength);
+            break;
         default:
             PRINTF("Selector index: %d not supported\n", context->selectorIndex);
             msg->result = TRON_PLUGIN_RESULT_ERROR;
