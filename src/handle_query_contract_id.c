@@ -17,14 +17,14 @@ void handle_query_contract_id(ethQueryContractID_t *msg) {
         case TRANSFER_TO_VALUE:
             strlcpy(msg->version, "Transfer", msg->versionLength);
             break;
-        case MINT:
-            strlcpy(msg->version, "Mint", msg->versionLength);
+        case SHIELDED_MINT:
+            strlcpy(msg->version, "Shielded Mint", msg->versionLength);
             break;
         case SHIELDED_TRANSFER:
             strlcpy(msg->version, "Shielded Transfer", msg->versionLength);
             break;
-        case BURN:
-            strlcpy(msg->version, "Burn", msg->versionLength);
+        case SHIELDED_BURN:
+            strlcpy(msg->version, "Shielded Burn", msg->versionLength);
             break;
         default:
             PRINTF("Selector index: %d not supported\n", context->selectorIndex);

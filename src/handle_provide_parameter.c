@@ -136,13 +136,13 @@ void handle_provide_parameter(tronPluginProvideParameter_t *msg) {
             break;
         case BOILERPLATE_DUMMY_2:
             break;
-        case MINT:
+        case SHIELDED_MINT:
             handle_mint(msg, context);
             break;
         case SHIELDED_TRANSFER:
             handle_shielded_transfer(msg, context);
             break;
-        case BURN:
+        case SHIELDED_BURN:
             handle_burn(msg, context);
             break;
         default:

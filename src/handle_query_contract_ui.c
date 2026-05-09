@@ -185,7 +185,7 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
                     PRINTF("Received an invalid screenIndex\n");
             }
             break;
-        case MINT:
+        case SHIELDED_MINT:
             switch (msg->screenIndex) {
                 case 0:
                     ret = set_value_ui(msg, context);
@@ -206,7 +206,7 @@ void handle_query_contract_ui(ethQueryContractUI_t *msg) {
                     PRINTF("Received an invalid screenIndex\n");
             }
             break;
-        case BURN:
+        case SHIELDED_BURN:
             switch (msg->screenIndex) {
                 case 0:
                     ret = set_value_ui(msg, context);

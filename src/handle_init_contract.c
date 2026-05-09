@@ -50,13 +50,13 @@ void handle_init_contract(tronPluginInitContract_t *msg) {
         case BOILERPLATE_DUMMY_2:
             context->next_param = TOKEN_RECEIVED;
             break;
-        case MINT:
+        case SHIELDED_MINT:
             context->next_param = MINT_RAW_VALUE;
             break;
         case SHIELDED_TRANSFER:
             context->next_param = SHIELDED_TRANSFER_SKIP;
             break;
-        case BURN:
+        case SHIELDED_BURN:
             context->next_param = BURN_RAW_VALUE;
             break;
         // Keep this

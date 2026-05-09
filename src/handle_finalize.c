@@ -48,7 +48,7 @@ void handle_finalize(tronPluginFinalize_t *msg) {
             msg->tokenLookup1 = context->token_received;
 
             break;
-        case MINT:
+        case SHIELDED_MINT:
             msg->numScreens = 2;
             msg->tokenLookup1 = msg->txContent->contractAddress;
             break;
@@ -56,7 +56,7 @@ void handle_finalize(tronPluginFinalize_t *msg) {
             msg->numScreens = 1;
             msg->tokenLookup1 = msg->txContent->contractAddress;
             break;
-        case BURN:
+        case SHIELDED_BURN:
             msg->numScreens = 2;
             msg->tokenLookup1 = msg->txContent->contractAddress;
             break;

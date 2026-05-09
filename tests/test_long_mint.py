@@ -70,7 +70,7 @@ CUSTOM_DATA = (
     "extra data.").encode()
 
 
-def test_sign_long_trigger_smart_contract(backend: BackendInterface,
+def test_sign_long_shielded_mint(backend: BackendInterface,
                                           device: Device,
                                           navigator: Navigator):
     client = TronClient(backend, device, navigator)
