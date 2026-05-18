@@ -5,7 +5,7 @@
 
 // Set UI for "Value" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_value_ui(ethQueryContractUI_t *msg, const context_t *context) {
+static bool set_value_ui(tronQueryContractUI_t *msg, const context_t *context) {
     strlcpy(msg->title, "Value", msg->titleLength);
 
     uint8_t decimals = context->decimals;
@@ -27,7 +27,7 @@ static bool set_value_ui(ethQueryContractUI_t *msg, const context_t *context) {
 
 // Set UI for "Contract" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_contract_ui(ethQueryContractUI_t *msg, context_t *context) {
+static bool set_contract_ui(tronQueryContractUI_t *msg, context_t *context) {
     (void) context;
     strlcpy(msg->title, "Contract", msg->titleLength);
     if (msg->txContent == NULL || msg->msgLength == 0) {
@@ -55,7 +55,7 @@ static bool set_contract_ui(ethQueryContractUI_t *msg, context_t *context) {
 
 // Set UI for "To Address" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_to_address_ui(ethQueryContractUI_t *msg, context_t *context) {
+static bool set_to_address_ui(tronQueryContractUI_t *msg, context_t *context) {
     strlcpy(msg->title, "To Address", msg->titleLength);
     PRINTF("set_to_address_ui to_address: %.*H\n", ADDRESS_LENGTH, context->to_address);
 
@@ -72,7 +72,7 @@ static bool set_to_address_ui(ethQueryContractUI_t *msg, context_t *context) {
 
 // Set UI for the "Send" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_send_ui(ethQueryContractUI_t *msg) {
+static bool set_send_ui(tronQueryContractUI_t *msg) {
     strlcpy(msg->title, "Send", msg->titleLength);
 
     if (msg->txContent == NULL) {
@@ -99,7 +99,7 @@ static bool set_send_ui(ethQueryContractUI_t *msg) {
 
 // Set UI for "Receive" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_receive_ui(ethQueryContractUI_t *msg, const context_t *context) {
+static bool set_receive_ui(tronQueryContractUI_t *msg, const context_t *context) {
     strlcpy(msg->title, "Receive Min.", msg->titleLength);
 
     uint8_t decimals = context->decimals;
@@ -121,7 +121,7 @@ static bool set_receive_ui(ethQueryContractUI_t *msg, const context_t *context) 
 
 // Set UI for "Beneficiary" screen.
 // EDIT THIS: Adapt / remove this function to your needs.
-static bool set_beneficiary_ui(ethQueryContractUI_t *msg, context_t *context) {
+static bool set_beneficiary_ui(tronQueryContractUI_t *msg, context_t *context) {
     strlcpy(msg->title, "Beneficiary", msg->titleLength);
 
     // Convert the stored 20-byte EVM-style address into a TRON Base58Check string.
@@ -139,7 +139,7 @@ static bool set_beneficiary_ui(ethQueryContractUI_t *msg, context_t *context) {
 }
 
 
-void handle_query_contract_ui(ethQueryContractUI_t *msg) {
+void handle_query_contract_ui(tronQueryContractUI_t *msg) {
     context_t *context = (context_t *) msg->pluginContext;
     bool ret = false;
 

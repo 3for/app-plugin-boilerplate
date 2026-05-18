@@ -9,16 +9,16 @@ void handle_init_contract(tronPluginInitContract_t *parameters);
 void handle_provide_parameter(tronPluginProvideParameter_t *parameters);
 void handle_finalize(tronPluginFinalize_t *parameters);
 void handle_provide_token(tronPluginProvideInfo_t *parameters);
-void handle_query_contract_id(ethQueryContractID_t *parameters);
-void handle_query_contract_ui(ethQueryContractUI_t *parameters);
+void handle_query_contract_id(tronQueryContractID_t *parameters);
+void handle_query_contract_ui(tronQueryContractUI_t *parameters);
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     tronPluginInitContract_t init_contract = {0};
     tronPluginProvideParameter_t provide_param = {0};
     tronPluginFinalize_t finalize = {0};
     tronPluginProvideInfo_t provide_info = {0};
-    ethQueryContractID_t query_id = {0};
-    ethQueryContractUI_t query_ui = {0};
+    tronQueryContractID_t query_id = {0};
+    tronQueryContractUI_t query_ui = {0};
     txContent_t content = {0};
 
     context_t context;
@@ -43,11 +43,11 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     }
     memcpy(&content, data + 4, sizeof(txContent_t));
 
-    // Use path: m/44'/60'/0'/0/0
+    // Use path: m/44'/195'/0'/0/0
     bip32_path_t bip32;
     bip32.length = 5;
     bip32.path[0] = 44 | 0x80000000;
-    bip32.path[1] = 60 | 0x80000000;
+    bip32.path[1] = 195 | 0x80000000;
     bip32.path[2] = 0 | 0x80000000;
     bip32.path[3] = 0;
     bip32.path[4] = 0;
