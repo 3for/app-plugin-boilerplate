@@ -105,6 +105,7 @@ add_executable(fuzz
     # sdk utils
     ${BOLOS_SDK}/src/ledger_assert.c
     ${BOLOS_SDK}/lib_standard_app/format.c
+    ${BOLOS_SDK}/lib_standard_app/base58.c
 
     # cxng
     ${BOLOS_SDK}/lib_cxng/src/cx_hash.c

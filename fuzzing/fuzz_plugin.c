@@ -1,5 +1,6 @@
 #include "plugin.h"
 #include "bip32_utils.h"
+#include "plugin_utils.h"
 
 // set a small size to detect possible overflows
 #define NAME_LENGTH    3u
@@ -37,45 +38,70 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     char name[NAME_LENGTH] = {0};
     char version[VERSION_LENGTH] = {0};
 
-    // data must be big enough to hold a selector and the txcontent
-    if (size < 4 + sizeof(txContent_t)) {
+    // Input layout:
+    //   data[0..SELECTOR_SIZE)               : selector hint (mapped to one of SELECTORS[])
+    //   data[SELECTOR_SIZE..+sizeof(content)): random txContent bytes
+    //   data[...]                            : 32-byte ABI words streamed into handle_provide_parameter
+    //   tail                                 : up to 2 extraInfo_t entries for token lookups
+    if (size < SELECTOR_SIZE + sizeof(txContent_t)) {
         return 0;
     }
-    memcpy(&content, data + 4, sizeof(txContent_t));
+    memcpy(&content, data + SELECTOR_SIZE, sizeof(txContent_t));
+
+    // Make `contractAddress` look like a valid TRON address (0x41 prefix) so
+    // set_contract_ui() can proceed past its prefix check during the UI loop.
+    content.contractAddress[0] = 0x41;
+
+    // Bias the selector to one of the known SELECTORS so that handle_init_contract
+    // accepts the input and the per-selector code paths get exercised. Without
+    // this bias, random 4-byte selectors are rejected ~99.999% of the time.
+    uint8_t selector_bytes[SELECTOR_SIZE];
+    uint32_t sel_value = SELECTORS[data[0] % SELECTOR_COUNT];
+    selector_bytes[0] = (uint8_t) ((sel_value >> 24) & 0xff);
+    selector_bytes[1] = (uint8_t) ((sel_value >> 16) & 0xff);
+    selector_bytes[2] = (uint8_t) ((sel_value >> 8) & 0xff);
+    selector_bytes[3] = (uint8_t) (sel_value & 0xff);
 
     // Use path: m/44'/195'/0'/0/0
     bip32_path_t bip32;
     bip32.length = 5;
-    bip32.path[0] = 44 | 0x80000000;
-    bip32.path[1] = 195 | 0x80000000;
-    bip32.path[2] = 0 | 0x80000000;
-    bip32.path[3] = 0;
-    bip32.path[4] = 0;
+    bip32.indices[0] = 44 | 0x80000000;
+    bip32.indices[1] = 195 | 0x80000000;
+    bip32.indices[2] = 0 | 0x80000000;
+    bip32.indices[3] = 0;
+    bip32.indices[4] = 0;
 
     init_contract.interfaceVersion = TRON_PLUGIN_INTERFACE_VERSION_LATEST;
-    init_contract.selector = data;
+    init_contract.selector = selector_bytes;
     init_contract.txContent = &content;
     init_contract.pluginContext = (uint8_t *) &context;
     init_contract.pluginContextLength = sizeof(context);
     init_contract.bip32 = &bip32;
+    init_contract.dataSize = size;
 
     handle_init_contract(&init_contract);
     if (init_contract.result != TRON_PLUGIN_RESULT_OK) {
         return 0;
     }
 
-    size_t i = 4 + sizeof(txContent_t);
-    // potentially save space for token lookups
-    while (size - i >= 32 + sizeof(extraInfo_t) * 2) {
-        provide_param.parameter = data + i;
-        provide_param.parameterOffset = i;
+    // Stream ABI parameters. Per SDK contract, `parameterOffset` is measured
+    // from the start of the calldata and starts at SELECTOR_SIZE for the first
+    // 32-byte word. The read cursor advances through `data` independently so
+    // we can reserve trailing bytes for the extraInfo_t entries below.
+    size_t read_cursor = SELECTOR_SIZE + sizeof(txContent_t);
+    uint32_t param_offset = SELECTOR_SIZE;
+    while (size - read_cursor >= PARAMETER_LENGTH + sizeof(extraInfo_t) * 2) {
+        provide_param.parameter = data + read_cursor;
+        provide_param.parameterOffset = param_offset;
+        provide_param.parameter_size = PARAMETER_LENGTH;
         provide_param.pluginContext = (uint8_t *) &context;
         provide_param.txContent = &content;
         handle_provide_parameter(&provide_param);
         if (provide_param.result != TRON_PLUGIN_RESULT_OK) {
             return 0;
         }
-        i += 32;
+        read_cursor += PARAMETER_LENGTH;
+        param_offset += PARAMETER_LENGTH;
     }
 
     finalize.pluginContext = (uint8_t *) &context;
@@ -90,22 +116,22 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         provide_info.pluginContext = (uint8_t *) &context;
         provide_info.txContent = &content;
         if (finalize.tokenLookup1) {
-            if (size - i >= sizeof(extraInfo_t)) {
+            if (size - read_cursor >= sizeof(extraInfo_t)) {
                 provide_info.item1 = &item1;
 
-                memcpy(provide_info.item1, data + i, sizeof(extraInfo_t));
+                memcpy(provide_info.item1, data + read_cursor, sizeof(extraInfo_t));
                 provide_info.item1->token.ticker[MAX_TICKER_LEN - 1] = '\0';
-                i += sizeof(extraInfo_t);
+                read_cursor += sizeof(extraInfo_t);
             }
         }
 
         if (finalize.tokenLookup2) {
-            if (size - i >= sizeof(extraInfo_t)) {
+            if (size - read_cursor >= sizeof(extraInfo_t)) {
                 provide_info.item2 = &item2;
 
-                memcpy(provide_info.item2, data + i, sizeof(extraInfo_t));
+                memcpy(provide_info.item2, data + read_cursor, sizeof(extraInfo_t));
                 provide_info.item2->token.ticker[MAX_TICKER_LEN - 1] = '\0';
-                i += sizeof(extraInfo_t);
+                read_cursor += sizeof(extraInfo_t);
             }
         }
 
@@ -130,15 +156,16 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
     printf("name:    %s\n", query_id.name);
     printf("version: %s\n", query_id.version);
 
-    for (int i = 0; i < finalize.numScreens + provide_info.additionalScreens; i++) {
+    for (int screen = 0; screen < finalize.numScreens + provide_info.additionalScreens; screen++) {
         query_ui.title = title;
         query_ui.titleLength = sizeof(title);
         query_ui.msg = msg;
         query_ui.msgLength = sizeof(msg);
         query_ui.pluginContext = (uint8_t *) &context;
         query_ui.txContent = &content;
+        strlcpy(query_ui.network_ticker, "TRX", sizeof(query_ui.network_ticker));
 
-        query_ui.screenIndex = i;
+        query_ui.screenIndex = screen;
         handle_query_contract_ui(&query_ui);
         if (query_ui.result != TRON_PLUGIN_RESULT_OK) {
             return 0;
