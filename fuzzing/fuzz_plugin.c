@@ -2,9 +2,38 @@
 #include "bip32_utils.h"
 #include "plugin_utils.h"
 
+#include <stdio.h>
+
 // set a small size to detect possible overflows
 #define NAME_LENGTH    3u
 #define VERSION_LENGTH 3u
+
+#ifndef FUZZ_HEARTBEAT_INTERVAL
+#define FUZZ_HEARTBEAT_INTERVAL 10000000ULL
+#endif
+
+#ifdef FUZZING_DEBUG
+#define FUZZ_LOG(...) printf(__VA_ARGS__)
+#else
+#define FUZZ_LOG(...) ((void) 0)
+#endif
+
+static void fuzz_heartbeat(size_t size) {
+#if FUZZ_HEARTBEAT_INTERVAL > 0
+    static unsigned long long iterations;
+
+    iterations++;
+    if (iterations % FUZZ_HEARTBEAT_INTERVAL == 0) {
+        fprintf(stderr,
+                "FUZZ_HEARTBEAT execs=%llu last_size=%zu\n",
+                iterations,
+                size);
+        fflush(stderr);
+    }
+#else
+    (void) size;
+#endif
+}
 
 void handle_init_contract(tronPluginInitContract_t *parameters);
 void handle_provide_parameter(tronPluginProvideParameter_t *parameters);
@@ -14,6 +43,8 @@ void handle_query_contract_id(tronQueryContractID_t *parameters);
 void handle_query_contract_ui(tronQueryContractUI_t *parameters);
 
 int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
+    fuzz_heartbeat(size);
+
     tronPluginInitContract_t init_contract = {0};
     tronPluginProvideParameter_t provide_param = {0};
     tronPluginFinalize_t finalize = {0};
@@ -153,8 +184,8 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         return 0;
     }
 
-    printf("name:    %s\n", query_id.name);
-    printf("version: %s\n", query_id.version);
+    FUZZ_LOG("name:    %s\n", query_id.name);
+    FUZZ_LOG("version: %s\n", query_id.version);
 
     for (int screen = 0; screen < finalize.numScreens + provide_info.additionalScreens; screen++) {
         query_ui.title = title;
@@ -170,7 +201,7 @@ int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size) {
         if (query_ui.result != TRON_PLUGIN_RESULT_OK) {
             return 0;
         }
-        printf("%s: %s\n", title, msg);
+        FUZZ_LOG("%s: %s\n", title, msg);
     }
 
     return 0;

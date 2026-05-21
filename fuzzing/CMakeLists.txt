@@ -49,9 +49,12 @@ set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -ggdb2 -O3 -Wno-gnu-zero-var
 
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../src")
 set(TRON_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tron-plugin-sdk")
+set(FUZZ_HEARTBEAT_INTERVAL "10000000" CACHE STRING
+    "Print one fuzzer heartbeat every N executions; set to 0 to disable.")
 
 add_compile_definitions(
     APPNAME="PluginBoilerplate"
+    FUZZ_HEARTBEAT_INTERVAL=${FUZZ_HEARTBEAT_INTERVAL}
 )
 
 add_compile_definitions(
